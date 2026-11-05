@@ -6,6 +6,9 @@ on:
       queries:
         description: 'semicolon separated, e.g. "HKG TPE 2026-12-06 2027-03-10 NRT; TPE KIX 2026-12-06"'
         required: true
+      script:
+        description: check.mjs or check2.mjs
+        default: check.mjs
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,6 +23,7 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
           QUERIES: ${{ inputs.queries }}
+          SCRIPT: ${{ inputs.script }}
         run: |
           IFS=';' read -ra Q <<< "$QUERIES"
-          for q in "${Q[@]}"; do node check.mjs $q || true; done
+          for q in "${Q[@]}"; do node "${SCRIPT:-check.mjs}" $q || true; done
