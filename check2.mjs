@@ -50,7 +50,7 @@ for (let at = 0; at < 3 && !done; at++) {
         let txt = '';
         for (let i = 0; i < 30; i++) { await sleep(1000); txt = await p.evaluate(() => document.body.innerText); if (/預訂選項/.test(txt) && /\$[\d,]+/.test(txt.split('預訂選項')[1] || '')) break; }
         await sleep(2000); txt = await p.evaluate(() => document.body.innerText);
-        const opt = (txt.split('預訂選項')[1] || '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 14).join(' / ');
+        const after = txt.split('預訂選項').slice(1).join(' '), opt = after.split('\n').map((x) => x.trim()).filter((x) => /透過|分段購票|^\$[\d,]+$|找不到/.test(x)).slice(0, 12).join(' / ');
         console.log(label, '| booking options:', opt.slice(0, 300));
       } else console.log(label, '| booking: row not found');
     }
