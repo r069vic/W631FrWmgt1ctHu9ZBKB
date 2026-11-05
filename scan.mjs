@@ -6,8 +6,12 @@ import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS'.split(',');
+const FULL = ['BR', 'CI', 'JX'];
+// per-entry config: key 'X' = X<>TPE, 'X@TSA' = X<>TSA (Songshan). Carrier overrides per key.
+const AIRLINES = { HND: [...FULL, 'JL', 'NH'], 'HND@TSA': [...FULL, 'JL', 'NH'], 'GMP@TSA': [...FULL, 'KE', 'OZ'] };
+const EXTRA = ['HND@TSA', 'GMP@TSA'];
 const MODE = arg('mode', 'broad');
-const AIRPORTS = (arg('airports', '') || ALL.join(',')).split(',').filter(Boolean);
+const AIRPORTS = (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = [95, 185];
@@ -44,8 +48,7 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const AIR = ['BR', 'CI', 'JX'];
-const tfs = (X, out, back) => { const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))])); return Buffer.concat([leg(X, 'TPE', out), leg('TPE', X, back), num(8, 1), num(9, 1), num(19, 1)]).toString('base64url'); };
+const tfs = (key, out, back) => { const [X, hub = 'TPE'] = key.split('@'); const AIR = AIRLINES[key] || FULL; const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))])); return Buffer.concat([leg(X, hub, out), leg(hub, X, back), num(8, 1), num(9, 1), num(19, 1)]).toString('base64url'); };
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
 
 let b = await launch(); const results = []; let n = 0;
