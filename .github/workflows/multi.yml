@@ -1,0 +1,78 @@
+name: multi
+# Multi-city X>TPE ... TPE>Y for every pair, split into 23 hourly batches (each pair once a day, all months).
+# Skips 16 UTC = 00:xx Taipei, when the same-station broad scan runs. Pauses itself when the Worker says Google errors spiked.
+on:
+  schedule:
+    - cron: '17 0-15,17-23 * * *'
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: batch 0-22, empty = from the current hour
+        default: ''
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: multi
+  cancel-in-progress: false
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      OUTSTATION_URL: ${{ secrets.OUTSTATION_URL }}
+      OUTSTATION_TOKEN: ${{ secrets.OUTSTATION_TOKEN }}
+    outputs:
+      batch: ${{ steps.p.outputs.batch }}
+      pause: ${{ steps.p.outputs.pause }}
+    steps:
+      - id: p
+        run: |
+          h=$(date -u +%-H); b="${{ inputs.batch }}"
+          if [ -z "$b" ]; then if [ "$h" -lt 16 ]; then b=$h; elif [ "$h" -eq 16 ]; then b=15; else b=$((h-1)); fi; fi
+          echo "batch=$b" >> "$GITHUB_OUTPUT"
+          st=$(curl -sS "${OUTSTATION_URL%/ingest}/status" -H "Authorization: Bearer $OUTSTATION_TOKEN" || echo '{}')
+          echo "batch $b, status $st"
+          if echo "$st" | grep -q '"pause":true'; then echo "pause=1" >> "$GITHUB_OUTPUT"; fi
+  scan:
+    needs: plan
+    if: needs.plan.outputs.pause != '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save puppeteer-core
+      - run: node scan.mjs --mode multi --batch ${{ needs.plan.outputs.batch }} --batches 23 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.shard }}
+          path: results/
+  merge:
+    needs: scan
+    if: always() && needs.scan.result != 'skipped'
+    runs-on: ubuntu-latest
+    env:
+      OUTSTATION_URL: ${{ secrets.OUTSTATION_URL }}
+      OUTSTATION_TOKEN: ${{ secrets.OUTSTATION_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - run: node merge.mjs art
+      - name: Upload to travel-detector, fine-scan pairs that dropped
+        run: |
+          curl -sS --fail-with-body -X POST "$OUTSTATION_URL" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" --data-binary @out/payload.json > resp.json
+          cat resp.json
+          keys=$(node -e "const r=require('./resp.json');process.stdout.write((r.fine||[]).join(','))")
+          if [ -n "$keys" ]; then gh workflow run scan.yml --repo "$GITHUB_REPOSITORY" -f mode=fine -f airports="$keys"; fi

@@ -1,5 +1,7 @@
-// Outstation price scan: X>TPE (Sunday) ... TPE>X (nearest Wednesday), full-service BR/CI/JX, cheapest of the three.
+// Outstation price scan: X>TPE (Sunday) ... TPE>X (nearest Wednesday) on full-service carriers.
+// Keys: 'X' = X<>TPE, 'X@TSA' = X<>Songshan, 'X>Y' = multi-city X>TPE ... TPE>Y.
 // node scan.mjs --mode broad|fine --airports HKG,NRT --shard 0 --shards 5 --out results/shard-0.json
+// node scan.mjs --mode multi --batch 3 --batches 23 ...   every X>Y pair, split into 23 hourly batches
 import puppeteer from 'puppeteer-core';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -11,7 +13,11 @@ const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ']; // EVA, China Airlines,
 const AIRLINES = {};
 const EXTRA = ['HND@TSA', 'GMP@TSA'];
 const MODE = arg('mode', 'broad');
-const AIRPORTS = (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
+// same-city pairs make no sense as multi-city
+const SAME_CITY = new Set(['HND>NRT', 'NRT>HND', 'ICN>GMP', 'GMP>ICN', 'BKK>DMK', 'DMK>BKK']);
+const PAIRS = ALL.flatMap((x) => ALL.filter((y) => y !== x).map((y) => x + '>' + y)).filter((k) => !SAME_CITY.has(k));
+const BATCH = +arg('batch', 0), BATCHES = +arg('batches', 1);
+const AIRPORTS = MODE === 'multi' ? PAIRS.filter((_, i) => i % BATCHES === BATCH) : (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = [95, 185];
@@ -48,19 +54,25 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const tfs = (key, out, back) => { const [X, hub = 'TPE'] = key.split('@'); const AIR = AIRLINES[key] || FULL; const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))])); return Buffer.concat([leg(X, hub, out), leg(hub, X, back), num(8, 1), num(9, 1), num(19, 1)]).toString('base64url'); };
+// trip type (field 19): 1 = round trip, 3 = multi-city
+const tfs = (key, out, back) => {
+  const [XY, hub = 'TPE'] = key.split('@'); const [X, Y = X] = XY.split('>'); const AIR = AIRLINES[key] || FULL;
+  const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
+  return Buffer.concat([leg(X, hub, out), leg(hub, Y, back), num(8, 1), num(9, 1), num(19, X === Y ? 1 : 3)]).toString('base64url');
+};
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
 
 // Reads the result rows on the page (outbound list, or the return list after an outbound flight is clicked).
 const parse = () => {
     const t = document.body.innerText; if (/系統發生錯誤/.test(t)) return { err: true };
+    const none = !/正在載入結果/.test(t) && /找不到|沒有符合|沒有.{0,6}航班/.test(t);
     const rows = [...document.querySelectorAll('li')].map((l) => l.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).filter((x) => x.some((s) => /^\$[\d,]+$/.test(s)) && x.includes('–')).map((x) => {
       const i = x.indexOf('–');
       // "下午6:15" / "凌晨1:30+1" -> "18:15" / "01:30+1"
       const h24 = (t) => { const m = (t || '').match(/^(\D*)(\d+):(\d+)(\+\d)?/); if (!m) return ''; let h = +m[2]; if (/下午|晚上|傍晚/.test(m[1]) && h < 12) h += 12; if (/凌晨|清晨|上午|早上/.test(m[1]) && h === 12) h = 0; return String(h).padStart(2, '0') + ':' + m[3] + (m[4] || ''); };
       return { p: +x.find((s) => /^\$[\d,]+$/.test(s)).replace(/\D/g, ''), air: x[i + 2] || '', dep: h24(x[i - 1]), arr: h24(x[i + 1]), dur: x.find((s) => /小時|分鐘/.test(s)) || '', stop: x.find((s) => /^直達$|轉機/.test(s)) || '', route: x.find((s) => /^[A-Z]{3}–[A-Z]{3}$/.test(s)) || '' };
     });
-    const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, min: m ? +m[1].replace(/,/g, '') : null };
+    const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, none, min: m ? +m[1].replace(/,/g, '') : null };
 };
 // Fine mode: click the cheapest outbound flight and read the cheapest return flight (Google only lists return times after that).
 const returnLeg = async (p, from) => {
@@ -78,7 +90,8 @@ const returnLeg = async (p, from) => {
   } catch {}
   return null;
 };
-let b = await launch(); const results = []; let n = 0;
+// stats.errs / stats.tries = share of page loads that hit Google's error page (rises when Google starts blocking)
+let b = await launch(); const results = []; let n = 0; const stats = { tries: 0, errs: 0 };
 for (const j of mine) {
   if (n > 0 && n % 20 === 0) { await b.close().catch(() => {}); b = await launch(); }
   let res = null;
@@ -87,19 +100,24 @@ for (const j of mine) {
     try {
       await p.setExtraHTTPHeaders({ 'Accept-Language': 'zh-TW' }); await p.setViewport({ width: 1100, height: 1500 });
       await p.goto(`https://www.google.com/travel/flights?tfs=${tfs(j.a, j.out, j.back)}&hl=zh-TW&gl=TW&curr=TWD`, { waitUntil: 'networkidle2', timeout: 60000 });
-      for (let i = 0; i < 12 && !res; i++) {
+      stats.tries++;
+      const multi = j.a.includes('>');
+      for (let i = 0; i < (multi ? 50 : 12) && !res; i++) {
         await sleep(1000);
-        const r = await p.evaluate(parse);
-        if (r.err) break;
-        if (r.min && r.rows.length) { const all = r.rows.sort((x, y) => x.p - y.p); res = { p: Math.min(r.min, all[0].p), air: all[0].air, rows: all.slice(0, 25) }; }
+        let r = await p.evaluate(parse);
+        if (r.err) { stats.errs++; break; }
+        if (r.none && i > 3) { res = { none: true }; break; } // no flights for this query: no retry
+        if (multi && r.rows.length && !r.min) { await sleep(2500); r = await p.evaluate(parse); } // multi-city pages have no "最低價格" header
+        if ((r.min || multi) && r.rows.length) { const all = r.rows.sort((x, y) => x.p - y.p); res = { p: r.min ? Math.min(r.min, all[0].p) : all[0].p, air: all[0].air, rows: all.slice(0, 25) }; }
       }
-      if (res && MODE === 'fine') res.ret = await returnLeg(p, j.a.split('@')[1] || 'TPE');
+      if (res && !res.none && MODE === 'fine') res.ret = await returnLeg(p, 'TPE');
     } catch {} finally { await p.close().catch(() => {}); }
     if (!res) await sleep(2000 * at);
   }
-  results.push({ ...j, p: res ? res.p : null, air: res ? res.air : '', rows: res ? res.rows : [], ret: res && res.ret || null, ts: new Date().toISOString() });
+  const ok = res && !res.none;
+  results.push({ ...j, p: ok ? res.p : null, air: ok ? res.air : '', rows: ok ? res.rows : [], ret: ok && res.ret || null, ts: new Date().toISOString() });
   n++; if (n % 10 === 0) console.log(`${n}/${mine.length}`);
 }
 await b.close();
-mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, JSON.stringify({ mode: MODE, results }));
-console.log(`done ${results.filter((r) => r.p).length}/${results.length} with price`);
+mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, JSON.stringify({ mode: MODE, results, stats }));
+console.log(`done ${results.filter((r) => r.p).length}/${results.length} with price, google errors ${stats.errs}/${stats.tries}`);

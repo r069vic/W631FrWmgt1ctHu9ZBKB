@@ -6,8 +6,15 @@ const dir = process.argv[2] || 'art';
 const THRESH = 0.8, MIN_OBS = 3, WINDOW_DAYS = 30;
 mkdirSync('data', { recursive: true });
 const files = []; const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) f.isDirectory() ? walk(join(d, f.name)) : f.name.endsWith('.json') && files.push(join(d, f.name)); }; walk(dir);
-let mode = 'broad'; const recs = [];
-for (const f of files) { const j = JSON.parse(readFileSync(f, 'utf8')); mode = j.mode || mode; recs.push(...j.results); }
+let mode = 'broad'; const recs = [], stats = { tries: 0, errs: 0 };
+for (const f of files) { const j = JSON.parse(readFileSync(f, 'utf8')); mode = j.mode || mode; recs.push(...j.results); if (j.stats) { stats.tries += j.stats.tries; stats.errs += j.stats.errs; } }
+// Multi-city (hourly): the Worker compares against the same-station baselines itself; nothing is kept in data/.
+if (mode === 'multi') {
+  mkdirSync('out', { recursive: true });
+  writeFileSync('out/payload.json', JSON.stringify({ mode, stats, rows: recs.filter((r) => r.p).map((r) => ({ ...r, rows: r.rows.slice(0, 8) })) }));
+  console.log(`mode=multi records=${recs.length} withPrice=${recs.filter((r) => r.p).length} google errors ${stats.errs}/${stats.tries}`);
+  process.exit(0);
+}
 const hist = existsSync('data/history.jsonl') ? readFileSync('data/history.jsonl', 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
 const key = (r) => `${r.a}|${r.out}|${r.back}`;
 const byKey = {}; for (const h of hist) (byKey[key(h)] ??= []).push(h);
