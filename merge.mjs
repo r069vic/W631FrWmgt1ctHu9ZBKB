@@ -23,7 +23,7 @@ for (const r of recs) {
   if (base && r.p <= base * THRESH) drops.push(rec);
 }
 appendFileSync('data/history.jsonl', recs.map(({ rows, ...r }) => JSON.stringify(r)).join('\n') + '\n'); // history keeps only the cheapest per row
-mkdirSync('out', { recursive: true }); writeFileSync('out/payload.json', JSON.stringify({ rows: recs.filter((r) => r.p) }));
+mkdirSync('out', { recursive: true }); writeFileSync('out/payload.json', JSON.stringify({ mode, rows: recs.filter((r) => r.p) }));
 writeFileSync('data/latest.json', JSON.stringify({ updated: new Date().toISOString(), mode, rows: Object.values(latest) }, null, 1));
 if (drops.length) {
   const old = existsSync('data/alerts.json') ? JSON.parse(readFileSync('data/alerts.json', 'utf8')) : [];
