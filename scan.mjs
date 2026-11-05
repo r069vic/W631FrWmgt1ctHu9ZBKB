@@ -1,0 +1,78 @@
+// Outstation price scan: X>TPE (Sunday) ... TPE>X (nearest Wednesday), full-service BR/CI/JX, cheapest of the three.
+// node scan.mjs --mode broad|fine --airports HKG,NRT --shard 0 --shards 5 --out results/shard-0.json
+import puppeteer from 'puppeteer-core';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
+const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS'.split(',');
+const MODE = arg('mode', 'broad');
+const AIRPORTS = (arg('airports', '') || ALL.join(',')).split(',').filter(Boolean);
+const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
+const OUT = arg('out', `results/shard-${SHARD}.json`);
+const LENGTHS = [95, 185];
+const HORIZON_DAYS = 328; // Google Flights shows about 11 months ahead
+
+const DAY = 864e5, iso = (t) => new Date(t).toISOString().slice(0, 10), dow = (t) => new Date(t).getUTCDay();
+const todayMs = Date.parse(iso(Date.now()));
+const horizon = todayMs + HORIZON_DAYS * DAY;
+const nearestWed = (t) => { for (let k = 0; k <= 3; k++) for (const s of [0, 1, -1]) { const c = t + s * k * DAY; if (dow(c) === 3) return c; } };
+let firstSun = todayMs + DAY; while (dow(firstSun) !== 0) firstSun += DAY;
+
+const outs = [];
+if (MODE === 'fine') { for (let o = firstSun; o <= horizon; o += 7 * DAY) outs.push(o); }
+else {
+  outs.push(firstSun);
+  const d0 = new Date(todayMs);
+  for (let m = 0; m < 12; m++) {
+    let o = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1); while (dow(o) !== 0) o += DAY;
+    if (o > todayMs && o !== firstSun && o <= horizon) outs.push(o);
+  }
+}
+const jobs = [];
+for (const a of AIRPORTS) for (const o of outs) for (const L of LENGTHS) {
+  const back = nearestWed(o + L * DAY); if (back > horizon) continue;
+  jobs.push({ a, out: iso(o), back: iso(back), len: Math.round((back - o) / DAY) });
+}
+const mine = jobs.filter((_, i) => i % SHARDS === SHARD);
+console.log(`mode=${MODE} airports=${AIRPORTS.length} jobs=${jobs.length} shard ${SHARD}/${SHARDS}: ${mine.length}`);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const varint = (n) => { const o = []; while (n > 127) { o.push((n & 127) | 128); n = Math.floor(n / 128); } o.push(n); return Buffer.from(o); };
+const field = (no, wire, payload) => Buffer.concat([varint(no * 8 + wire), payload]);
+const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.concat([varint(b.length), b])); };
+const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
+const num = (no, n) => field(no, 0, varint(n));
+const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
+const AIR = ['BR', 'CI', 'JX'];
+const tfs = (X, out, back) => { const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))])); return Buffer.concat([leg(X, 'TPE', out), leg('TPE', X, back), num(8, 1), num(9, 1), num(19, 1)]).toString('base64url'); };
+const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
+
+let b = await launch(); const results = []; let n = 0;
+for (const j of mine) {
+  if (n > 0 && n % 20 === 0) { await b.close().catch(() => {}); b = await launch(); }
+  let res = null;
+  for (let at = 1; at <= 4 && !res; at++) {
+    const p = await b.newPage();
+    try {
+      await p.setExtraHTTPHeaders({ 'Accept-Language': 'zh-TW' }); await p.setViewport({ width: 1100, height: 1500 });
+      await p.goto(`https://www.google.com/travel/flights?tfs=${tfs(j.a, j.out, j.back)}&hl=zh-TW&gl=TW&curr=TWD`, { waitUntil: 'networkidle2', timeout: 60000 });
+      for (let i = 0; i < 12 && !res; i++) {
+        await sleep(1000);
+        const r = await p.evaluate(() => {
+          const t = document.body.innerText; if (/系統發生錯誤/.test(t)) return { err: true };
+          const rows = [...document.querySelectorAll('li')].map((l) => l.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).filter((x) => x.some((s) => /^\$[\d,]+$/.test(s)) && x.includes('–')).map((x) => { const i = x.indexOf('–'); return { p: +x.find((s) => /^\$[\d,]+$/.test(s)).replace(/\D/g, ''), air: x[i + 2] || '' }; });
+          const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, min: m ? +m[1].replace(/,/g, '') : null };
+        });
+        if (r.err) break;
+        if (r.min && r.rows.length) { const best = r.rows.sort((x, y) => x.p - y.p)[0]; res = { p: Math.min(r.min, best.p), air: best.air }; }
+      }
+    } catch {} finally { await p.close().catch(() => {}); }
+    if (!res) await sleep(2000 * at);
+  }
+  results.push({ ...j, p: res ? res.p : null, air: res ? res.air : '', ts: new Date().toISOString() });
+  n++; if (n % 10 === 0) console.log(`${n}/${mine.length}`);
+}
+await b.close();
+mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, JSON.stringify({ mode: MODE, results }));
+console.log(`done ${results.filter((r) => r.p).length}/${results.length} with price`);

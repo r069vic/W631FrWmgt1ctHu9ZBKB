@@ -1,0 +1,69 @@
+name: scan
+on:
+  schedule:
+    - cron: '0 0 * * *' # 08:00 Taipei, broad scan
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: broad (monthly first Sunday) or fine (every Sunday)
+        default: broad
+      airports:
+        description: comma separated IATA codes, empty = all
+        default: ''
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: scan-data
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save puppeteer-core
+      - run: node scan.mjs --mode "${{ inputs.mode || 'broad' }}" --airports "${{ inputs.airports }}" --shard ${{ matrix.shard }} --shards 5 --out results/shard-${{ matrix.shard }}.json
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: results/
+  merge:
+    needs: scan
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      drop_airports: ${{ steps.m.outputs.drop_airports }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - id: m
+        run: node merge.mjs art
+      - name: Commit data
+        run: |
+          git config user.name "scan-bot"
+          git config user.email "noreply@github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "scan data $(date -u +%F)"
+          git pull --rebase -q || true
+          git push
+  fine:
+    needs: merge
+    if: needs.merge.outputs.drop_airports != '' && (inputs.mode || 'broad') == 'broad'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger fine scan for airports with a drop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run scan.yml --repo "$GITHUB_REPOSITORY" -f mode=fine -f airports="${{ needs.merge.outputs.drop_airports }}"
