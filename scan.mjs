@@ -64,7 +64,12 @@ for (const j of mine) {
         await sleep(1000);
         const r = await p.evaluate(() => {
           const t = document.body.innerText; if (/系統發生錯誤/.test(t)) return { err: true };
-          const rows = [...document.querySelectorAll('li')].map((l) => l.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).filter((x) => x.some((s) => /^\$[\d,]+$/.test(s)) && x.includes('–')).map((x) => { const i = x.indexOf('–'); return { p: +x.find((s) => /^\$[\d,]+$/.test(s)).replace(/\D/g, ''), air: x[i + 2] || '' }; });
+          const rows = [...document.querySelectorAll('li')].map((l) => l.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).filter((x) => x.some((s) => /^\$[\d,]+$/.test(s)) && x.includes('–')).map((x) => {
+            const i = x.indexOf('–');
+            // "下午6:15" / "凌晨1:30+1" -> "18:15" / "01:30+1"
+            const h24 = (t) => { const m = (t || '').match(/^(\D*)(\d+):(\d+)(\+\d)?/); if (!m) return ''; let h = +m[2]; if (/下午|晚上|傍晚/.test(m[1]) && h < 12) h += 12; if (/凌晨|清晨|上午|早上/.test(m[1]) && h === 12) h = 0; return String(h).padStart(2, '0') + ':' + m[3] + (m[4] || ''); };
+            return { p: +x.find((s) => /^\$[\d,]+$/.test(s)).replace(/\D/g, ''), air: x[i + 2] || '', dep: h24(x[i - 1]), arr: h24(x[i + 1]), dur: x.find((s) => /小時|分鐘/.test(s)) || '', stop: x.find((s) => /^直達$|轉機/.test(s)) || '' };
+          });
           const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, min: m ? +m[1].replace(/,/g, '') : null };
         });
         if (r.err) break;
