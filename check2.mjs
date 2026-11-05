@@ -40,6 +40,20 @@ for (let at = 0; at < 3 && !done; at++) {
     const fsc = (x) => FSC_NAMES.some((n) => x.info.includes(n));
     const one = second.filter((x) => !x.sep && fsc(x)).sort((a, c) => a.p - c.p), sep = second.filter((x) => x.sep).sort((a, c) => a.p - c.p);
     console.log(label, '| second leg rows', second.length, '| one ticket (full-service):', one.slice(0, 3).map((x) => x.p + ' ' + x.info).join(', ') || 'none', '| separate tickets:', sep.slice(0, 3).map((x) => x.p + ' ' + x.info).join(', ') || 'none');
+    // click the cheapest second-leg row and read the booking options ("預訂選項"): one ticket or 分段購票
+    if (one.length || second.length) {
+      const target = (one[0] || second[0]).p;
+      let h2 = null;
+      for (const h of await p.$$('li')) { const t = await h.evaluate((l) => l.innerText); if (t.includes(T + '–') && t.includes('$' + target.toLocaleString('en-US'))) { h2 = h; break; } }
+      if (h2) {
+        await h2.evaluate((l) => l.scrollIntoView({ block: 'center' })); await sleep(300); await h2.click();
+        let txt = '';
+        for (let i = 0; i < 30; i++) { await sleep(1000); txt = await p.evaluate(() => document.body.innerText); if (/預訂選項/.test(txt) && /\$[\d,]+/.test(txt.split('預訂選項')[1] || '')) break; }
+        await sleep(2000); txt = await p.evaluate(() => document.body.innerText);
+        const opt = (txt.split('預訂選項')[1] || '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 14).join(' / ');
+        console.log(label, '| booking options:', opt.slice(0, 300));
+      } else console.log(label, '| booking: row not found');
+    }
     done = true;
   } catch (e) { console.log(label, 'error', String(e).slice(0, 80)); } finally { await p.close().catch(() => {}); }
 }
