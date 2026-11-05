@@ -1,7 +1,7 @@
 name: scan
 on:
   schedule:
-    - cron: '0 0 * * *' # 08:00 Taipei, broad scan
+    - cron: '30 16 * * *' # 00:30 Taipei, broad scan
   workflow_dispatch:
     inputs:
       mode:
