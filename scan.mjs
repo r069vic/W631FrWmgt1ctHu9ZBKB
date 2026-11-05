@@ -6,9 +6,9 @@ import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS'.split(',');
-const FULL = ['BR', 'CI', 'JX'];
+const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana
 // per-entry config: key 'X' = X<>TPE, 'X@TSA' = X<>TSA (Songshan). Carrier overrides per key.
-const AIRLINES = { HND: [...FULL, 'JL', 'NH'], 'HND@TSA': [...FULL, 'JL', 'NH'], 'GMP@TSA': [...FULL, 'KE', 'OZ'] };
+const AIRLINES = {};
 const EXTRA = ['HND@TSA', 'GMP@TSA'];
 const MODE = arg('mode', 'broad');
 const AIRPORTS = (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
@@ -68,12 +68,12 @@ for (const j of mine) {
           const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, min: m ? +m[1].replace(/,/g, '') : null };
         });
         if (r.err) break;
-        if (r.min && r.rows.length) { const best = r.rows.sort((x, y) => x.p - y.p)[0]; res = { p: Math.min(r.min, best.p), air: best.air }; }
+        if (r.min && r.rows.length) { const all = r.rows.sort((x, y) => x.p - y.p); res = { p: Math.min(r.min, all[0].p), air: all[0].air, rows: all.slice(0, 25) }; }
       }
     } catch {} finally { await p.close().catch(() => {}); }
     if (!res) await sleep(2000 * at);
   }
-  results.push({ ...j, p: res ? res.p : null, air: res ? res.air : '', ts: new Date().toISOString() });
+  results.push({ ...j, p: res ? res.p : null, air: res ? res.air : '', rows: res ? res.rows : [], ts: new Date().toISOString() });
   n++; if (n % 10 === 0) console.log(`${n}/${mine.length}`);
 }
 await b.close();
