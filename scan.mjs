@@ -51,6 +51,33 @@ const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
 const tfs = (key, out, back) => { const [X, hub = 'TPE'] = key.split('@'); const AIR = AIRLINES[key] || FULL; const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))])); return Buffer.concat([leg(X, hub, out), leg(hub, X, back), num(8, 1), num(9, 1), num(19, 1)]).toString('base64url'); };
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
 
+// Reads the result rows on the page (outbound list, or the return list after an outbound flight is clicked).
+const parse = () => {
+    const t = document.body.innerText; if (/系統發生錯誤/.test(t)) return { err: true };
+    const rows = [...document.querySelectorAll('li')].map((l) => l.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).filter((x) => x.some((s) => /^\$[\d,]+$/.test(s)) && x.includes('–')).map((x) => {
+      const i = x.indexOf('–');
+      // "下午6:15" / "凌晨1:30+1" -> "18:15" / "01:30+1"
+      const h24 = (t) => { const m = (t || '').match(/^(\D*)(\d+):(\d+)(\+\d)?/); if (!m) return ''; let h = +m[2]; if (/下午|晚上|傍晚/.test(m[1]) && h < 12) h += 12; if (/凌晨|清晨|上午|早上/.test(m[1]) && h === 12) h = 0; return String(h).padStart(2, '0') + ':' + m[3] + (m[4] || ''); };
+      return { p: +x.find((s) => /^\$[\d,]+$/.test(s)).replace(/\D/g, ''), air: x[i + 2] || '', dep: h24(x[i - 1]), arr: h24(x[i + 1]), dur: x.find((s) => /小時|分鐘/.test(s)) || '', stop: x.find((s) => /^直達$|轉機/.test(s)) || '', route: x.find((s) => /^[A-Z]{3}–[A-Z]{3}$/.test(s)) || '' };
+    });
+    const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, min: m ? +m[1].replace(/,/g, '') : null };
+};
+// Fine mode: click the cheapest outbound flight and read the cheapest return flight (Google only lists return times after that).
+const returnLeg = async (p, from) => {
+  try {
+    let best = null, bp = Infinity;
+    for (const h of await p.$$('li')) { const t = await h.evaluate((l) => l.innerText); const m = t.match(/\$([\d,]+)/); if (m && t.includes('–')) { const v = +m[1].replace(/,/g, ''); if (v < bp) { bp = v; best = h; } } }
+    if (!best) return null;
+    await best.evaluate((l) => l.scrollIntoView({ block: 'center' })); await sleep(300); await best.click();
+    for (let i = 0; i < 15; i++) {
+      await sleep(1000);
+      const r = await p.evaluate(parse);
+      const rs = (r.rows || []).filter((x) => x.route.startsWith(from + '–'));
+      if (rs.length) { const c = rs.reduce((m, x) => (x.p < m.p ? x : m)); return { dep: c.dep, arr: c.arr, dur: c.dur, stop: c.stop, air: c.air }; }
+    }
+  } catch {}
+  return null;
+};
 let b = await launch(); const results = []; let n = 0;
 for (const j of mine) {
   if (n > 0 && n % 20 === 0) { await b.close().catch(() => {}); b = await launch(); }
@@ -62,23 +89,15 @@ for (const j of mine) {
       await p.goto(`https://www.google.com/travel/flights?tfs=${tfs(j.a, j.out, j.back)}&hl=zh-TW&gl=TW&curr=TWD`, { waitUntil: 'networkidle2', timeout: 60000 });
       for (let i = 0; i < 12 && !res; i++) {
         await sleep(1000);
-        const r = await p.evaluate(() => {
-          const t = document.body.innerText; if (/系統發生錯誤/.test(t)) return { err: true };
-          const rows = [...document.querySelectorAll('li')].map((l) => l.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).filter((x) => x.some((s) => /^\$[\d,]+$/.test(s)) && x.includes('–')).map((x) => {
-            const i = x.indexOf('–');
-            // "下午6:15" / "凌晨1:30+1" -> "18:15" / "01:30+1"
-            const h24 = (t) => { const m = (t || '').match(/^(\D*)(\d+):(\d+)(\+\d)?/); if (!m) return ''; let h = +m[2]; if (/下午|晚上|傍晚/.test(m[1]) && h < 12) h += 12; if (/凌晨|清晨|上午|早上/.test(m[1]) && h === 12) h = 0; return String(h).padStart(2, '0') + ':' + m[3] + (m[4] || ''); };
-            return { p: +x.find((s) => /^\$[\d,]+$/.test(s)).replace(/\D/g, ''), air: x[i + 2] || '', dep: h24(x[i - 1]), arr: h24(x[i + 1]), dur: x.find((s) => /小時|分鐘/.test(s)) || '', stop: x.find((s) => /^直達$|轉機/.test(s)) || '' };
-          });
-          const m = t.match(/最低價格\s*\n?\s*\$([\d,]+)/); return { rows, min: m ? +m[1].replace(/,/g, '') : null };
-        });
+        const r = await p.evaluate(parse);
         if (r.err) break;
         if (r.min && r.rows.length) { const all = r.rows.sort((x, y) => x.p - y.p); res = { p: Math.min(r.min, all[0].p), air: all[0].air, rows: all.slice(0, 25) }; }
       }
+      if (res && MODE === 'fine') res.ret = await returnLeg(p, j.a.split('@')[1] || 'TPE');
     } catch {} finally { await p.close().catch(() => {}); }
     if (!res) await sleep(2000 * at);
   }
-  results.push({ ...j, p: res ? res.p : null, air: res ? res.air : '', rows: res ? res.rows : [], ts: new Date().toISOString() });
+  results.push({ ...j, p: res ? res.p : null, air: res ? res.air : '', rows: res ? res.rows : [], ret: res && res.ret || null, ts: new Date().toISOString() });
   n++; if (n % 10 === 0) console.log(`${n}/${mine.length}`);
 }
 await b.close();
