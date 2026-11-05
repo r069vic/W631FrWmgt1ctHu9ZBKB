@@ -1,0 +1,66 @@
+name: cal
+# Calendar scan: Google Flights date-picker prices for every departure day, full-service carriers only.
+# Four kinds (same / rt / ow1 / ow2) x 23 routes; about 115 searches. Manual for now (schedule off).
+on:
+  workflow_dispatch:
+    inputs:
+      kinds:
+        description: same,rt,ow1,ow2
+        default: 'same,rt,ow1,ow2'
+      airports:
+        description: comma separated keys, empty = all
+        default: ''
+permissions:
+  contents: write
+concurrency:
+  group: scan-data
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save puppeteer-core
+      - run: node scan_cal.mjs --kinds "${{ inputs.kinds || 'same,rt,ow1,ow2' }}" --airports "${{ inputs.airports }}" --shard ${{ matrix.shard }} --shards 5 --out results/cal-${{ matrix.shard }}.json
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cal-${{ matrix.shard }}
+          path: results/
+  merge:
+    needs: scan
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      OUTSTATION_URL: ${{ secrets.OUTSTATION_URL }}
+      OUTSTATION_TOKEN: ${{ secrets.OUTSTATION_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - run: node merge_cal.mjs art
+      - name: Upload to travel-detector (one request per kind)
+        run: |
+          url="${OUTSTATION_URL%/out/ingest}/cal/ingest"
+          for f in out/cal-*.json; do
+            echo "$f"; curl -sS --fail-with-body -X POST "$url" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" --data-binary @"$f"; echo
+          done
+      - name: Commit history
+        run: |
+          git config user.name "scan-bot"
+          git config user.email "noreply@github.com"
+          git add data/cal
+          git diff --cached --quiet || git commit -m "calendar data $(date -u +%F)"
+          git pull --rebase -q || true
+          git push
