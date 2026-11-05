@@ -1,0 +1,25 @@
+name: check
+# One-off manual searches: each line of "queries" = arguments for check.mjs (FROM TO OUT [BACK] [Y]).
+on:
+  workflow_dispatch:
+    inputs:
+      queries:
+        description: 'semicolon separated, e.g. "HKG TPE 2026-12-06 2027-03-10 NRT; TPE KIX 2026-12-06"'
+        required: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save puppeteer-core
+      - name: Run queries
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          QUERIES: ${{ inputs.queries }}
+        run: |
+          IFS=';' read -ra Q <<< "$QUERIES"
+          for q in "${Q[@]}"; do node check.mjs $q || true; done
