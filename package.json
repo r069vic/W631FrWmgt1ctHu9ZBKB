@@ -1,0 +1,1 @@
+{ "name": "flight-scan", "private": true, "type": "module", "dependencies": { "puppeteer-core": "*" } }
