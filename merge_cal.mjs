@@ -35,9 +35,9 @@ for (const r of recs) {
   todayHist[k] = Object.fromEntries(r.prices);
   // compact upload: first departure day + parallel arrays (price, baseline or 0) for consecutive days, 0 = no price
   const d0 = r.prices[0][0], last = r.prices[r.prices.length - 1][0], n = Math.round((Date.parse(last) - Date.parse(d0)) / DAY) + 1;
-  const p = new Array(n).fill(0), b = new Array(n).fill(0);
-  for (const [dep, v] of r.prices) { const i = Math.round((Date.parse(dep) - Date.parse(d0)) / DAY); p[i] = v; const o = h[dep]; if (o && o.length >= MIN_OBS) { b[i] = median(o); based++; } }
-  (byKind[r.k] ??= []).push({ k: r.k, a: r.a, len: r.len, d0, p, b });
+  const p = new Array(n).fill(0), b = new Array(n).fill(0), l = new Array(n).fill(0);
+  for (const [dep, v, L] of r.prices) { const i = Math.round((Date.parse(dep) - Date.parse(d0)) / DAY); p[i] = v; if (L) l[i] = L; const o = h[dep]; if (o && o.length >= MIN_OBS) { b[i] = median(o); based++; } }
+  (byKind[r.k] ??= []).push({ k: r.k, a: r.a, len: r.len, d0, p, b, ...(r.k === 'same' ? { l } : {}) });
 }
 writeFileSync(join('data/cal', today + '.json.gz'), gzipSync(JSON.stringify(todayHist)));
 mkdirSync('out', { recursive: true });

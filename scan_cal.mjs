@@ -1,6 +1,7 @@
 // Calendar scan: reads Google Flights date-picker prices (every departure day, ~11 months) with the full-service filter.
 // Kinds (one job per route and trip length):
-//   same  X>TPE ... TPE>X, 94 / 185 days (Sunday out = Wednesday back)
+//   same  X>TPE ... TPE>X, stay about 94 / 185 days: lengths 91-97 and 182-188 are read and the cheapest per departure day is kept
+//         (Google has no cached price for many single long-stay lengths; the union covers about 80% of days)
 //   rt    TPE>X ... X>TPE, 5 / 6 / 7 days (one page; the trip length is switched in the calendar)
 //   ow1   TPE>X one-way      ow2   X>TPE one-way
 // Keys: 'X' (Taoyuan) or 'X@TSA' (Songshan).
@@ -12,7 +13,8 @@ import { dirname } from 'node:path';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,HND@TSA,GMP@TSA'.split(',');
 const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana
-const LENS = { same: [94, 185], rt: [5, 6, 7], ow1: [0], ow2: [0] };
+const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
+const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0] };
 const KINDS = arg('kinds', 'same,rt,ow1,ow2').split(',').filter((k) => LENS[k]);
 const AIRPORTS = (arg('airports', '') || ALL.join(',')).split(',').filter(Boolean);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
@@ -24,6 +26,7 @@ const tomorrow = iso(Date.now() + DAY);
 const jobs = [];
 for (const k of KINDS) for (const a of AIRPORTS) {
   if (k === 'rt') jobs.push({ k, a, lens: LENS.rt });
+  else if (k === 'same') for (const c of CENTERS) jobs.push({ k, a, lens: range(c), center: c });
   else for (const L of LENS[k]) jobs.push({ k, a, lens: [L] });
 }
 const mine = jobs.filter((_, i) => i % SHARDS === SHARD);
@@ -97,7 +100,12 @@ for (const j of mine) {
     } catch {} finally { await p.close().catch(() => {}); }
     if (!Object.keys(out).length) await sleep(2000 * at);
   }
-  for (const L of j.lens) results.push({ k: j.k, a: j.a, len: L, prices: out[L] || [], ts: new Date().toISOString() });
+  if (j.center) {
+    // cheapest per departure day across the lengths; entries are [date, price, length]
+    const m = {};
+    for (const L of j.lens) for (const [d, p] of out[L] || []) if (!(d in m) || p < m[d][0]) m[d] = [p, L];
+    results.push({ k: j.k, a: j.a, len: j.center, prices: Object.entries(m).sort().map(([d, [p, L]]) => [d, p, L]), ts: new Date().toISOString() });
+  } else for (const L of j.lens) results.push({ k: j.k, a: j.a, len: L, prices: out[L] || [], ts: new Date().toISOString() });
   n++; console.log(`${n}/${mine.length} ${j.k} ${j.a} ${j.lens.map((L) => L + ':' + (out[L] ? out[L].length : 0)).join(' ')}`);
   mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, JSON.stringify({ mode: 'cal', results, stats })); // keep progress if the job is cut off
 }
