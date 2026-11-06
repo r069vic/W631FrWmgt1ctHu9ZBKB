@@ -36,10 +36,13 @@ for (let at = 0; at < 3 && !done; at++) {
     let best = null, bp = Infinity;
     for (const h of await p.$$('li')) { const t = await h.evaluate((l) => l.innerText); const m = t.match(/\$([\d,]+)/); if (m && t.includes('–')) { if (opts.p1) { if (t.includes(opts.p1)) { best = h; break; } continue; } const v = +m[1].replace(/,/g, ''); if (v < bp) { bp = v; best = h; } } }
     if (!best) { console.log(label, '| first-leg flight not found'); throw new Error('no first leg'); }
+    console.log(label, '| first leg clicked:', (await best.evaluate((l) => l.innerText.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 7).join(' | '))).slice(0, 170));
     await best.evaluate((l) => l.scrollIntoView({ block: 'center' })); await sleep(300); await best.click();
     const r2 = (Y || F); let second = [];
     for (let i = 0; i < 30; i++) { await sleep(1000); second = (await read(p)).filter((x) => x.route.startsWith(T + '–')); if (second.length) break; }
     await sleep(2500); second = (await read(p)).filter((x) => x.route.startsWith(T + '–'));
+    const all2 = await p.evaluate((T) => [...document.querySelectorAll('li')].filter((l) => l.innerText.includes(T + '–') && /\$[\d,]+/.test(l.innerText)).map((l) => l.innerText.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4).join(' ') + ' => $' + l.innerText.match(/\$([\d,]+)/)[1]), T);
+    console.log(label, '| second leg rows (flight => total):', all2.slice(0, 10).join(' // '));
     const fsc = (x) => FSC_NAMES.some((n) => x.info.includes(n));
     const one = second.filter((x) => !x.sep && fsc(x)).sort((a, c) => a.p - c.p), sep = second.filter((x) => x.sep).sort((a, c) => a.p - c.p);
     console.log(label, '| second leg rows', second.length, '| one ticket (full-service):', one.slice(0, 3).map((x) => x.p + ' ' + x.info).join(', ') || 'none', '| separate tickets:', sep.slice(0, 3).map((x) => x.p + ' ' + x.info).join(', ') || 'none');
@@ -49,6 +52,7 @@ for (let at = 0; at < 3 && !done; at++) {
       let h2 = null;
       for (const h of await p.$$('li')) { const t = await h.evaluate((l) => l.innerText); if (t.includes(T + '–') && (opts.p2 ? t.includes(opts.p2) : t.includes('$' + target.toLocaleString('en-US')))) { h2 = h; break; } }
       if (h2) {
+        console.log(label, '| second leg clicked:', (await h2.evaluate((l) => l.innerText.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4).join(' | '))).slice(0, 140));
         await h2.evaluate((l) => l.scrollIntoView({ block: 'center' })); await sleep(300); await h2.click();
         let txt = '';
         for (let i = 0; i < 30; i++) { await sleep(1000); txt = await p.evaluate(() => document.body.innerText); if (/預訂選項/.test(txt) && /\$[\d,]+/.test(txt.split('預訂選項')[1] || '')) break; }
