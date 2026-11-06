@@ -1,7 +1,11 @@
 name: cal
 # Calendar scan: Google Flights date-picker prices for every departure day, full-service carriers only.
-# Four kinds (same / rt / ow1 / ow2) x 23 routes; about 115 searches. Manual for now (schedule off).
+# Taipei time: 00:30 everything, 10:30 round trips + one-ways, 12:30 same-station.
 on:
+  schedule:
+    - cron: '30 16 * * *'
+    - cron: '30 2 * * *'
+    - cron: '30 4 * * *'
   workflow_dispatch:
     inputs:
       kinds:
@@ -29,7 +33,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-save puppeteer-core
-      - run: node scan_cal.mjs --kinds "${{ inputs.kinds || 'same,rt,ow1,ow2' }}" --airports "${{ inputs.airports }}" --shard ${{ matrix.shard }} --shards 5 --out results/cal-${{ matrix.shard }}.json
+      - run: node scan_cal.mjs --kinds "${{ github.event.schedule == '30 2 * * *' && 'rt,ow1,ow2' || github.event.schedule == '30 4 * * *' && 'same' || inputs.kinds || 'same,rt,ow1,ow2' }}" --airports "${{ inputs.airports }}" --shard ${{ matrix.shard }} --shards 5 --out results/cal-${{ matrix.shard }}.json
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - uses: actions/upload-artifact@v4

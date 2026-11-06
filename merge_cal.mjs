@@ -39,7 +39,10 @@ for (const r of recs) {
   for (const [dep, v, L] of r.prices) { const i = Math.round((Date.parse(dep) - Date.parse(d0)) / DAY); p[i] = v; if (L) l[i] = L; const o = h[dep]; if (o && o.length >= MIN_OBS) { b[i] = median(o); based++; } }
   (byKind[r.k] ??= []).push({ k: r.k, a: r.a, len: r.len, d0, p, b, ...(r.k === 'same' ? { l } : {}) });
 }
-writeFileSync(join('data/cal', today + '.json.gz'), gzipSync(JSON.stringify(todayHist)));
+// a day can have several runs with different kinds: keep what earlier runs of today stored for other routes
+const todayFile = join('data/cal', today + '.json.gz');
+const prevToday = existsSync(todayFile) ? JSON.parse(gunzipSync(readFileSync(todayFile)).toString()) : {};
+writeFileSync(todayFile, gzipSync(JSON.stringify({ ...prevToday, ...todayHist })));
 mkdirSync('out', { recursive: true });
 for (const [kind, routes] of Object.entries(byKind)) writeFileSync(`out/cal-${kind}.json`, JSON.stringify({ kind, day: today, stats, routes }));
 console.log(`calendar day=${today} series=${recs.length} priced=${priced} days with baseline=${based} google errors ${stats.errs}/${stats.tries}`);

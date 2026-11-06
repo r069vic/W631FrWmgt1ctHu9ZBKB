@@ -11,7 +11,8 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
-const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,HND@TSA,GMP@TSA'.split(',');
+// DMK (Bangkok Don Mueang) is left out: none of the seven carriers fly there.
+const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,HND@TSA,GMP@TSA'.split(',');
 const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana
 const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
 const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0] };
@@ -58,6 +59,18 @@ const clickByLabel = (p, re) => p.evaluate((src) => { const r = new RegExp(src);
 // the right arrow next to "N 日行程"
 const nextLen = (p) => p.evaluate(() => { const lab = [...document.querySelectorAll('*')].find((e) => e.children.length === 0 && /日行程/.test(e.textContent) && e.offsetParent); let box = lab; for (let k = 0; k < 4 && box; k++) { box = box.parentElement; const bs = [...box.querySelectorAll('button,[role=button]')]; if (bs.length >= 2) { bs[bs.length - 1].click(); return true; } } return false; });
 
+// earliest date shown in the calendar right now
+const firstShown = (p) => p.evaluate(() => [...document.querySelectorAll('[role=gridcell][data-iso]')].filter((c) => c.offsetParent).map((c) => c.getAttribute('data-iso')).sort()[0] || '');
+// Reads backward from where the calendar is, until the first month (used after a trip-length switch, so no flipping back first).
+async function readBack(p, map) {
+  const add = (cells) => { let n = 0; for (const [d, v] of cells) if (d >= tomorrow && v > 0) { if (!(d in map)) n++; map[d] = v; } return n; };
+  add(await readCells(p));
+  for (let f = 0; f < MAX_FLIPS + 2; f++) {
+    if ((await firstShown(p)) <= tomorrow) break;
+    if (!(await clickByLabel(p, '^上一頁$'))) break;
+    for (let i = 0; i < 10; i++) { await sleep(700); if (add(await readCells(p))) break; }
+  }
+}
 // Reads every month: flips forward until no new priced day shows up.
 async function readAll(p, map) {
   const add = (cells) => { let n = 0; for (const [d, v] of cells) if (d >= tomorrow && v > 0) { if (!(d in map)) n++; map[d] = v; } return n; };
@@ -87,14 +100,14 @@ for (const j of mine) {
       for (let li = 0; li < j.lens.length; li++) {
         const L = j.lens[li];
         if (li > 0) {
-          // switch the trip length in place, then go back to the first month and read forward again
+          // switch the trip length in place; read from wherever the calendar now is
           await nextLen(p);
           for (let i = 0; i < 15 && !(await lenLabel(p)).startsWith(L + ' '); i++) await sleep(500);
           if (!(await lenLabel(p)).startsWith(L + ' ')) break;
-          for (let f = 0; f < MAX_FLIPS + 2; f++) { if (!(await clickByLabel(p, '^上一頁$'))) break; await sleep(400); }
           await sleep(1500);
         }
-        const map = {}; await readAll(p, map);
+        // after a switch Google usually shows the first month again; read backward only if it stayed at the end
+        const map = {}; if (li > 0 && (await firstShown(p)) > tomorrow) await readBack(p, map); else await readAll(p, map);
         if (Object.keys(map).length) out[L] = Object.entries(map).sort();
       }
     } catch {} finally { await p.close().catch(() => {}); }
