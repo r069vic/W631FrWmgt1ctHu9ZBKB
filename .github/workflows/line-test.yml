@@ -1,0 +1,36 @@
+name: line-test
+# One-off trial of the LINE Travel scanner (scan_line.mjs). Runs only for pushes to the line-scan-test branch (or by hand).
+# It never touches data/ and sends nothing to the Worker; it commits its output to test-out/ on the test branch.
+on:
+  push:
+    branches: [line-scan-test]
+    paths:
+      - scan_line.mjs
+      - .github/workflows/line-test.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: line-test
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run a small LINE scan (4 pairs x 3 dates)
+        run: |
+          mkdir -p test-out
+          node scan_line.mjs --test --out test-out/line-test.json 2>&1 | tee test-out/line-test.log
+      - name: Commit the output to the test branch
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -f test-out/line-test.json test-out/line-test.log
+          git commit -m "line-test output" || echo "nothing to commit"
+          git push origin HEAD:line-scan-test
