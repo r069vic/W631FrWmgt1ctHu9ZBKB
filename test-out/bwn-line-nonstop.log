@@ -1,0 +1,15 @@
+line scan TEST pairs=4 jobs=12 shard 0/1: 12; wait 60s x max 5, concurrency 20
+wait 1: 12 pending, sleeping 60s
+done 6/12 with price, failed 0, not complete after 5 waits 0, requests 24, 65s
+BWN>NRT  2026-11-15 2027-02-17  94d  p=121845  汶萊航空、國泰航空    total=1 polls=2 done=true@wait1
+BWN>NRT  2026-12-06 2027-06-09 185d  p= 20696  汶萊航空、星宇航空    total=20 polls=2 done=true@wait1
+BWN>NRT  2027-02-07 2027-08-11 185d  p= 27699  汶萊航空、日本航空    total=20 polls=2 done=true@wait1
+NRT>BWN  2026-11-15 2027-02-17  94d  p=  null               total=0 polls=2 done=true@wait1
+NRT>BWN  2026-12-06 2027-06-09 185d  p=  null               total=0 polls=2 done=true@wait1
+NRT>BWN  2027-02-07 2027-08-11 185d  p=  null               total=0 polls=2 done=true@wait1
+BWN>HKG  2026-11-15 2027-02-17  94d  p= 16341  汶萊航空、星宇航空    total=16 polls=2 done=true@wait1
+BWN>HKG  2026-12-06 2027-06-09 185d  p= 16474  汶萊航空、星宇航空    total=16 polls=2 done=true@wait1
+BWN>HKG  2027-02-07 2027-08-11 185d  p= 23234  汶萊航空、國泰航空    total=23 polls=2 done=true@wait1
+HKG>BWN  2026-11-15 2027-02-17  94d  p=  null               total=0 polls=2 done=true@wait1
+HKG>BWN  2026-12-06 2027-06-09 185d  p=  null               total=0 polls=2 done=true@wait1
+HKG>BWN  2027-02-07 2027-08-11 185d  p=  null               total=0 polls=2 done=true@wait1

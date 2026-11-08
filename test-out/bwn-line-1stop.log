@@ -1,0 +1,14 @@
+line scan TEST pairs=4 jobs=12 shard 0/1: 12; wait 60s x max 5, concurrency 20
+done 12/12 with price, failed 0, not complete after 5 waits 0, requests 12, 2s
+BWN>NRT  2026-11-15 2027-02-17  94d  p= 25430  汶萊航空、長榮航空    total=78 polls=1 done=true
+BWN>NRT  2026-12-06 2027-06-09 185d  p= 17375  汶萊航空、長榮航空    total=149 polls=1 done=true
+BWN>NRT  2027-02-07 2027-08-11 185d  p= 16174  汶萊航空、長榮航空    total=202 polls=1 done=true
+NRT>BWN  2026-11-15 2027-02-17  94d  p= 21694  國泰航空、長榮航空、汶萊航空 total=233 polls=1 done=true
+NRT>BWN  2026-12-06 2027-06-09 185d  p= 20565  長榮航空、汶萊航空    total=255 polls=1 done=true
+NRT>BWN  2027-02-07 2027-08-11 185d  p= 24446  長榮航空、汶萊航空    total=236 polls=1 done=true
+BWN>HKG  2026-11-15 2027-02-17  94d  p= 14384  汶萊航空、長榮航空、星宇航空 total=272 polls=1 done=true
+BWN>HKG  2026-12-06 2027-06-09 185d  p= 16474  汶萊航空、星宇航空    total=158 polls=1 done=true
+BWN>HKG  2027-02-07 2027-08-11 185d  p= 16386  汶萊航空、長榮航空    total=288 polls=1 done=true
+HKG>BWN  2026-11-15 2027-02-17  94d  p= 12541  長榮航空、汶萊航空    total=248 polls=1 done=true
+HKG>BWN  2026-12-06 2027-06-09 185d  p= 12541  長榮航空、汶萊航空    total=233 polls=1 done=true
+HKG>BWN  2027-02-07 2027-08-11 185d  p= 13171  長榮航空、汶萊航空    total=282 polls=1 done=true
