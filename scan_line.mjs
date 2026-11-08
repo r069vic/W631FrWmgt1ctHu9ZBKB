@@ -12,7 +12,7 @@ import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const TEST = process.argv.includes('--test');
-const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS'.split(',');
+const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,BWN'.split(',');
 // same-city pairs make no sense as multi-city
 const SAME_CITY = new Set(['HND>NRT', 'NRT>HND', 'ICN>GMP', 'GMP>ICN', 'BKK>DMK', 'DMK>BKK']);
 const PAIRS = ALL.flatMap((x) => ALL.filter((y) => y !== x).map((y) => x + '>' + y)).filter((k) => !SAME_CITY.has(k));
@@ -22,7 +22,7 @@ const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = arg('lengths', '95,185').split(',').map(Number);
 const HORIZON_DAYS = +arg('horizon', 328);
 const WAIT_S = +arg('wait', 60), MAX_WAITS = +arg('max-waits', 5), CONC = +arg('concurrency', 20);
-const AIRLINES = arg('airlines', 'CI,BR,CX,JL,JX,KE,NH').split(',');
+const AIRLINES = arg('airlines', 'CI,BR,CX,JL,JX,KE,NH,OZ,BI').split(',');
 const TEST_PAIRS = arg('pairs', 'KIX>NRT,NRT>KIX,FUK>HND,HKG>NRT').split(',');
 const PER_PAIR = +arg('perpair', 3);
 

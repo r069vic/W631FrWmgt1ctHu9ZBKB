@@ -8,7 +8,7 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const AIR = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ'];
+const AIR = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ', 'CX', 'BI'];
 const [F, T, OUT, BACK, Y] = process.argv.slice(2); // multi-city when Y is given: F>T on OUT, T>Y on BACK
 const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
 const tfs = Buffer.concat([leg(F, T, OUT), ...(BACK ? [leg(T, Y || F, BACK)] : []), num(8, 1), num(9, 1), num(19, Y ? 3 : BACK ? 1 : 2)]).toString('base64url');

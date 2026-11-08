@@ -9,7 +9,7 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const AIR = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ'];
+const AIR = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ', 'CX', 'BI'];
 const FSC_NAMES = ['長榮航空', '中華航空', '星宇航空', '日本航空', '全日空航空', '大韓航空', '韓亞航空'];
 const opts = Object.fromEntries(process.argv.slice(2).filter((a) => a.includes('=')).map((a) => a.split('=')));
 const [F, T, OUT, BACK, Y] = process.argv.slice(2).filter((a) => !a.includes('='));
