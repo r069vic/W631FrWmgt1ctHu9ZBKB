@@ -22,7 +22,9 @@ const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = arg('lengths', '95,185').split(',').map(Number);
 const HORIZON_DAYS = +arg('horizon', 328);
 const WAIT_S = +arg('wait', 60), MAX_WAITS = +arg('max-waits', 5), CONC = +arg('concurrency', 20);
-const AIRLINES = arg('airlines', 'CI,BR,CX,JL,JX,KE,NH,OZ,BI').split(',');
+// --airlines ANY = no carrier filter; --stops N = max connections per leg (0 = nonstop only)
+const AIRLINES = arg('airlines', 'CI,BR,CX,JL,JX,KE,NH,OZ,BI') === 'ANY' ? [] : arg('airlines', 'CI,BR,CX,JL,JX,KE,NH,OZ,BI').split(',');
+const STOPS = +arg('stops', 0);
 const TEST_PAIRS = arg('pairs', 'KIX>NRT,NRT>KIX,FUK>HND,HKG>NRT').split(',');
 const PER_PAIR = +arg('perpair', 3);
 
@@ -66,7 +68,7 @@ const bodyOf = (j) => {
     page: 1, pageSize: 20,
     flightSegments: [{ departDate: j.out, fromAirport: X, toAirport: 'TPE' }, { departDate: j.back, fromAirport: 'TPE', toAirport: Y }],
     airlines: AIRLINES, roundType: 2, cabinClass: 1, numOfAdult: 1, numOfChildren: 0, numOfBaby: 0,
-    order: 'asc', orderBy: 'priceAfterDiscount', linePointsRebateOnly: true, maxTransferCount: 0,
+    order: 'asc', orderBy: 'priceAfterDiscount', linePointsRebateOnly: true, maxTransferCount: STOPS,
   });
 };
 // Network errors and 5xx are tried up to 3 times, 2 s apart. Any other HTTP status is a failure.
@@ -124,7 +126,7 @@ const results = state.map((s) => {
 });
 const elapsedSec = Math.round((Date.now() - t0) / 1000);
 mkdirSync(dirname(OUT), { recursive: true });
-writeFileSync(OUT, JSON.stringify({ mode: 'multi', results, stats, meta: { source: 'line', elapsedSec, waits, waitSec: WAIT_S, concurrency: CONC, airlines: AIRLINES } }, null, TEST ? 1 : 0));
+writeFileSync(OUT, JSON.stringify({ mode: 'multi', results, stats, meta: { source: 'line', elapsedSec, waits, waitSec: WAIT_S, concurrency: CONC, airlines: AIRLINES, stops: STOPS } }, null, TEST ? 1 : 0));
 
 const priced = results.filter((r) => r.p);
 console.log(`done ${priced.length}/${results.length} with price, failed ${stats.errs}, not complete after ${MAX_WAITS} waits ${state.filter((s) => !s.done && !s.failed).length}, requests ${stats.reqs}, ${elapsedSec}s`);

@@ -17,7 +17,7 @@ const MODE = arg('mode', 'broad');
 const SAME_CITY = new Set(['HND>NRT', 'NRT>HND', 'ICN>GMP', 'GMP>ICN', 'BKK>DMK', 'DMK>BKK']);
 const PAIRS = ALL.flatMap((x) => ALL.filter((y) => y !== x).map((y) => x + '>' + y)).filter((k) => !SAME_CITY.has(k));
 const BATCH = +arg('batch', 0), BATCHES = +arg('batches', 1);
-const AIRPORTS = MODE === 'multi' ? PAIRS.filter((_, i) => i % BATCHES === BATCH) : (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
+const AIRPORTS = MODE === 'multi' && arg('pairs', '') ? arg('pairs', '').split(',') : MODE === 'multi' ? PAIRS.filter((_, i) => i % BATCHES === BATCH) : (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = [95, 185];
