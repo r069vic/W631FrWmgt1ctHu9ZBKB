@@ -1,0 +1,17 @@
+mode=multi records=247 withPrice=169 google errors 0/247
+line scan batch 0/24 pairs=19 jobs=247 shard 0/4: 62; wait 60s x max 5, concurrency 20
+wait 1: 62 pending, sleeping 60s
+wait 2: 13 pending, sleeping 60s
+done 43/62 with price, failed 0, not complete after 5 waits 0, requests 137, 137s
+line scan batch 0/24 pairs=19 jobs=247 shard 1/4: 62; wait 60s x max 5, concurrency 20
+wait 1: 62 pending, sleeping 60s
+wait 2: 15 pending, sleeping 60s
+done 43/62 with price, failed 0, not complete after 5 waits 0, requests 139, 136s
+line scan batch 0/24 pairs=19 jobs=247 shard 2/4: 62; wait 60s x max 5, concurrency 20
+wait 1: 62 pending, sleeping 60s
+wait 2: 16 pending, sleeping 60s
+done 42/62 with price, failed 0, not complete after 5 waits 0, requests 140, 136s
+line scan batch 0/24 pairs=19 jobs=247 shard 3/4: 61; wait 60s x max 5, concurrency 20
+wait 1: 61 pending, sleeping 60s
+wait 2: 19 pending, sleeping 60s
+done 41/61 with price, failed 0, not complete after 5 waits 0, requests 141, 136s
