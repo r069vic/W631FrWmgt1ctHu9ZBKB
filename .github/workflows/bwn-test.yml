@@ -1,10 +1,11 @@
 name: bwn-test
-# One-off: does the Google per-leg max-stops field (5) restrict results to nonstop? Pushes to line-scan-test touching this file, or by hand.
+# One-off probe: how does Google Flights encode "nonstop only"? Pushes to line-scan-test touching this file, or by hand.
 on:
   push:
     branches: [line-scan-test]
     paths:
       - .github/workflows/bwn-test.yml
+      - probe_stops.mjs
   workflow_dispatch:
 permissions:
   contents: write
@@ -12,25 +13,20 @@ concurrency:
   group: bwn-test
   cancel-in-progress: false
 jobs:
-  google:
+  probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        stops: ['0', '1']
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm install --no-save puppeteer-core
-      - run: |
-          mkdir -p test-out
-          node scan.mjs --mode multi --pairs "NRT>BWN,HKG>BWN,BWN>HKG" --stops ${{ matrix.stops }} --shard 0 --shards 8 --out test-out/bwn-g2-stops${{ matrix.stops }}.json 2>&1 | tee test-out/bwn-g2-stops${{ matrix.stops }}.log
+      - run: node probe_stops.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
-      - run: |
+      - if: always()
+        run: |
           git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
-          git add -f test-out/bwn-g2-*; git commit -m "bwn-g2 stops${{ matrix.stops }}" || echo none
+          git add -f test-out/probe-stops.json; git commit -m "probe-stops output" || echo none
           for i in 1 2 3; do git pull --rebase -q origin line-scan-test && git push origin HEAD:line-scan-test && break; sleep 5; done
