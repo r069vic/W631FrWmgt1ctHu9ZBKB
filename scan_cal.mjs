@@ -40,7 +40,7 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...FULL.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
+const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), num(5, 0) /* nonstop only */, ...FULL.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
 // the search that opens the calendar: first departure tomorrow, return after the first trip length
 const tfs = (j) => {
   const [X, H = 'TPE'] = j.a.split('@'), L = j.lens[0], back = iso(Date.parse(tomorrow) + L * DAY);

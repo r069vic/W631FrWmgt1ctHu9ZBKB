@@ -1,13 +1,14 @@
 name: multi
-# Multi-city X>TPE ... TPE>Y for every pair, split into 23 hourly batches (each pair once a day, all months).
-# Skips 16 UTC = 00:xx Taipei, when the same-station broad scan runs. Pauses itself when the Worker says Google errors spiked.
+# Multi-city X>TPE ... TPE>Y for every pair, nonstop only, from LINE Travel's JSON API (scan_line.mjs).
+# 24 hourly batches (batch = UTC hour); each pair once a day, all months. One batch = about 19 pairs x 13 date groups.
+# LINE finds no nonstop itinerary -> the pair has no row (nothing is guessed from Google).
 on:
   schedule:
-    - cron: '17 0-15,17-23 * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       batch:
-        description: batch 0-22, empty = from the current hour
+        description: batch 0-23, empty = the current UTC hour
         default: ''
 permissions:
   contents: read
@@ -18,26 +19,17 @@ concurrency:
 jobs:
   plan:
     runs-on: ubuntu-latest
-    env:
-      OUTSTATION_URL: ${{ secrets.OUTSTATION_URL }}
-      OUTSTATION_TOKEN: ${{ secrets.OUTSTATION_TOKEN }}
     outputs:
       batch: ${{ steps.p.outputs.batch }}
-      pause: ${{ steps.p.outputs.pause }}
     steps:
       - id: p
         run: |
-          h=$(date -u +%-H); b="${{ inputs.batch }}"
-          if [ -z "$b" ]; then if [ "$h" -lt 16 ]; then b=$h; elif [ "$h" -eq 16 ]; then b=15; else b=$((h-1)); fi; fi
-          echo "batch=$b" >> "$GITHUB_OUTPUT"
-          st=$(curl -sS "${OUTSTATION_URL%/ingest}/status" -H "Authorization: Bearer $OUTSTATION_TOKEN" || echo '{}')
-          echo "batch $b, status $st"
-          if echo "$st" | grep -q '"pause":true'; then echo "pause=1" >> "$GITHUB_OUTPUT"; fi
+          b="${{ inputs.batch }}"; [ -z "$b" ] && b=$(date -u +%-H)
+          echo "batch=$b" >> "$GITHUB_OUTPUT"; echo "batch $b"
   scan:
     needs: plan
-    if: needs.plan.outputs.pause != '1'
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -47,10 +39,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install --no-save puppeteer-core
-      - run: node scan.mjs --mode multi --batch ${{ needs.plan.outputs.batch }} --batches 23 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json
-        env:
-          CHROME_PATH: /usr/bin/google-chrome
+      # waits 60 s after starting the searches, then asks again every 60 s (at most 5 times) until LINE reports them complete
+      - run: node scan_line.mjs --batch ${{ needs.plan.outputs.batch }} --batches 24 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,7 +60,7 @@ jobs:
         with:
           path: art
       - run: node merge.mjs art
-      - name: Upload to travel-detector, fine-scan pairs that dropped
+      - name: Upload to travel-detector
         run: |
           curl -sS --fail-with-body -X POST "$OUTSTATION_URL" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" --data-binary @out/payload.json > resp.json
           cat resp.json

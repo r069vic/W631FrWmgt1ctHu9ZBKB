@@ -1,0 +1,43 @@
+name: multi-dryrun
+# Temporary: runs batch 0 of the new multi pipeline through scan_line + merge without uploading. Pushes to line-scan-test only.
+on:
+  push:
+    branches: [line-scan-test]
+    paths: [.github/workflows/multi-dryrun.yml]
+permissions:
+  contents: write
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scan_line.mjs --batch 0 --batches 24 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json | tee results/log-${{ matrix.shard }}.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.shard }}
+          path: results/
+  merge:
+    needs: scan
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - run: |
+          node merge.mjs art | tee dry.log
+          mkdir -p test-out; cp dry.log test-out/dryrun.log; cp out/payload.json test-out/dryrun-payload.json
+          cat art/*/log-*.txt >> test-out/dryrun.log
+          git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
+          git add -f test-out/dryrun*; git commit -m "dryrun output" || echo none
+          for i in 1 2 3; do git pull --rebase -q origin line-scan-test && git push origin HEAD:line-scan-test && break; sleep 5; done
