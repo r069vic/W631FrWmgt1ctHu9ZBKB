@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node scan_line.mjs --batch 0 --batches 24 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json | tee results/log-${{ matrix.shard }}.txt
+      - run: mkdir -p results && node scan_line.mjs --batch 0 --batches 24 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json | tee results/log-${{ matrix.shard }}.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
