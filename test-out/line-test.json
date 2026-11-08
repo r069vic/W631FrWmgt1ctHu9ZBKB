@@ -231,12 +231,12 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 204,
     "err": null
    }
@@ -471,12 +471,12 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 225,
     "err": null
    }
@@ -498,7 +498,7 @@
      "stop": "直達",
      "route": "KIX–TPE",
      "fare": 17759,
-     "backDep": "10:40"
+     "backDep": "15:00"
     },
     {
      "p": 17723,
@@ -509,7 +509,7 @@
      "stop": "直達",
      "route": "KIX–TPE",
      "fare": 17759,
-     "backDep": "15:00"
+     "backDep": "10:40"
     },
     {
      "p": 18043,
@@ -685,17 +685,6 @@
      "stop": "直達",
      "route": "KIX–TPE",
      "fare": 23371,
-     "backDep": "16:25"
-    },
-    {
-     "p": 23238,
-     "air": "中華航空",
-     "dep": "14:30",
-     "arr": "16:50",
-     "dur": "3 小時 20 分鐘",
-     "stop": "直達",
-     "route": "KIX–TPE",
-     "fare": 23371,
      "backDep": "14:35"
     },
     {
@@ -708,16 +697,27 @@
      "route": "KIX–TPE",
      "fare": 23371,
      "backDep": "12:15"
+    },
+    {
+     "p": 23238,
+     "air": "中華航空",
+     "dep": "14:30",
+     "arr": "16:50",
+     "dur": "3 小時 20 分鐘",
+     "stop": "直達",
+     "route": "KIX–TPE",
+     "fare": 23371,
+     "backDep": "08:50"
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
-    "total": 236,
+    "polls": 3,
+    "doneAtWait": 2,
+    "total": 235,
     "err": null
    }
   },
@@ -738,6 +738,17 @@
      "stop": "直達",
      "route": "NRT–TPE",
      "fare": 15571,
+     "backDep": "14:20"
+    },
+    {
+     "p": 15515,
+     "air": "中華航空",
+     "dep": "19:30",
+     "arr": "22:45",
+     "dur": "4 小時 15 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 15571,
      "backDep": "09:45"
     },
     {
@@ -749,28 +760,6 @@
      "stop": "直達",
      "route": "NRT–TPE",
      "fare": 15571,
-     "backDep": "08:05"
-    },
-    {
-     "p": 15515,
-     "air": "中華航空",
-     "dep": "19:30",
-     "arr": "22:45",
-     "dur": "4 小時 15 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 15571,
-     "backDep": "14:20"
-    },
-    {
-     "p": 16074,
-     "air": "中華航空",
-     "dep": "17:45",
-     "arr": "20:55",
-     "dur": "4 小時 10 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 16135,
      "backDep": "08:05"
     },
     {
@@ -794,6 +783,17 @@
      "route": "NRT–TPE",
      "fare": 16135,
      "backDep": "14:20"
+    },
+    {
+     "p": 16074,
+     "air": "中華航空",
+     "dep": "17:45",
+     "arr": "20:55",
+     "dur": "4 小時 10 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 16135,
+     "backDep": "08:05"
     },
     {
      "p": 17156,
@@ -875,6 +875,28 @@
     {
      "p": 18463,
      "air": "長榮航空",
+     "dep": "13:00",
+     "arr": "16:05",
+     "dur": "4 小時 5 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 18503,
+     "backDep": "06:30"
+    },
+    {
+     "p": 18463,
+     "air": "長榮航空",
+     "dep": "13:00",
+     "arr": "16:05",
+     "dur": "4 小時 5 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 18503,
+     "backDep": "08:20"
+    },
+    {
+     "p": 18463,
+     "air": "長榮航空",
      "dep": "20:20",
      "arr": "23:25",
      "dur": "4 小時 5 分鐘",
@@ -915,28 +937,6 @@
      "route": "NRT–TPE",
      "fare": 18503,
      "backDep": "13:30"
-    },
-    {
-     "p": 18463,
-     "air": "長榮航空",
-     "dep": "13:00",
-     "arr": "16:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 18503,
-     "backDep": "08:20"
-    },
-    {
-     "p": 18463,
-     "air": "長榮航空",
-     "dep": "13:00",
-     "arr": "16:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 18503,
-     "backDep": "06:30"
     },
     {
      "p": 19662,
@@ -951,12 +951,12 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 169,
     "err": null
    }
@@ -1191,13 +1191,13 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
-    "total": 191,
+    "polls": 3,
+    "doneAtWait": 2,
+    "total": 193,
     "err": null
    }
   },
@@ -1243,36 +1243,36 @@
      "backDep": "06:30"
     },
     {
-     "p": 20088,
+     "p": 20102,
      "air": "長榮航空",
      "dep": "20:20",
      "arr": "23:25",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 20137,
+     "fare": 20151,
      "backDep": "06:30"
     },
     {
-     "p": 20088,
+     "p": 20102,
      "air": "長榮航空",
      "dep": "20:20",
      "arr": "23:25",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 20137,
+     "fare": 20151,
      "backDep": "08:20"
     },
     {
-     "p": 20088,
+     "p": 20102,
      "air": "長榮航空",
      "dep": "20:20",
      "arr": "23:25",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 20137,
+     "fare": 20151,
      "backDep": "13:35"
     },
     {
@@ -1309,135 +1309,135 @@
      "backDep": "09:00"
     },
     {
-     "p": 23627,
-     "air": "長榮航空、中華航空",
-     "dep": "14:00",
-     "arr": "17:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 23723,
-     "backDep": ""
-    },
-    {
-     "p": 23956,
-     "air": "長榮航空、星宇航空",
-     "dep": "14:00",
-     "arr": "17:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 24054,
-     "backDep": ""
-    },
-    {
-     "p": 23956,
-     "air": "長榮航空、星宇航空",
-     "dep": "14:00",
-     "arr": "17:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 24054,
-     "backDep": ""
-    },
-    {
-     "p": 23956,
-     "air": "長榮航空、中華航空",
-     "dep": "14:00",
-     "arr": "17:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 24054,
-     "backDep": ""
-    },
-    {
-     "p": 23956,
-     "air": "長榮航空、中華航空",
-     "dep": "14:00",
-     "arr": "17:05",
-     "dur": "4 小時 5 分鐘",
-     "stop": "直達",
-     "route": "NRT–TPE",
-     "fare": 24054,
-     "backDep": ""
-    },
-    {
-     "p": 24404,
+     "p": 25451,
      "air": "星宇航空",
      "dep": "13:45",
      "arr": "16:50",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 24474,
+     "fare": 25526,
      "backDep": "08:30"
     },
     {
-     "p": 24404,
+     "p": 25451,
      "air": "星宇航空",
      "dep": "15:40",
      "arr": "18:45",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 24474,
+     "fare": 25526,
      "backDep": "08:30"
     },
     {
-     "p": 24404,
+     "p": 25451,
      "air": "星宇航空",
      "dep": "13:45",
      "arr": "16:50",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 24474,
+     "fare": 25526,
      "backDep": "10:15"
     },
     {
-     "p": 24404,
+     "p": 25451,
      "air": "星宇航空",
      "dep": "15:40",
      "arr": "18:45",
      "dur": "4 小時 5 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 24474,
+     "fare": 25526,
      "backDep": "10:15"
     },
     {
-     "p": 24404,
+     "p": 25451,
      "air": "星宇航空",
      "dep": "20:10",
      "arr": "23:20",
      "dur": "4 小時 10 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 24474,
+     "fare": 25526,
      "backDep": "08:30"
     },
     {
-     "p": 24404,
+     "p": 25451,
      "air": "星宇航空",
      "dep": "20:10",
      "arr": "23:20",
      "dur": "4 小時 10 分鐘",
      "stop": "直達",
      "route": "NRT–TPE",
-     "fare": 24474,
+     "fare": 25526,
      "backDep": "10:15"
+    },
+    {
+     "p": 25973,
+     "air": "中華航空",
+     "dep": "19:30",
+     "arr": "22:45",
+     "dur": "4 小時 15 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 26134,
+     "backDep": "14:20"
+    },
+    {
+     "p": 25973,
+     "air": "中華航空",
+     "dep": "19:30",
+     "arr": "22:45",
+     "dur": "4 小時 15 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 26134,
+     "backDep": "09:00"
+    },
+    {
+     "p": 25973,
+     "air": "中華航空",
+     "dep": "19:30",
+     "arr": "22:45",
+     "dur": "4 小時 15 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 26134,
+     "backDep": "08:15"
+    },
+    {
+     "p": 25973,
+     "air": "中華航空",
+     "dep": "17:45",
+     "arr": "20:55",
+     "dur": "4 小時 10 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 26134,
+     "backDep": "08:15"
+    },
+    {
+     "p": 25973,
+     "air": "中華航空",
+     "dep": "17:45",
+     "arr": "20:55",
+     "dur": "4 小時 10 分鐘",
+     "stop": "直達",
+     "route": "NRT–TPE",
+     "fare": 26134,
+     "backDep": "09:00"
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
-    "total": 203,
+    "polls": 3,
+    "doneAtWait": 2,
+    "total": 57,
     "err": null
    }
   },
@@ -1473,12 +1473,12 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 2,
     "err": null
    }
@@ -1492,12 +1492,12 @@
    "air": "",
    "rows": [],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 0,
     "err": null
    }
@@ -1534,12 +1534,12 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 2,
     "err": null
    }
@@ -1685,69 +1685,69 @@
      "backDep": "08:50"
     },
     {
-     "p": 13873,
+     "p": 13908,
      "air": "中華航空、星宇航空",
      "dep": "11:10",
      "arr": "12:55",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 13912,
+     "fare": 13947,
      "backDep": ""
     },
     {
-     "p": 13873,
+     "p": 13908,
      "air": "中華航空、星宇航空",
      "dep": "10:20",
      "arr": "12:05",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 13912,
+     "fare": 13947,
      "backDep": ""
     },
     {
-     "p": 13938,
+     "p": 13972,
      "air": "中華航空",
      "dep": "11:10",
      "arr": "12:55",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 13977,
+     "fare": 14012,
      "backDep": "16:25"
     },
     {
-     "p": 13938,
+     "p": 13972,
      "air": "中華航空",
      "dep": "10:20",
      "arr": "12:05",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 13977,
+     "fare": 14012,
      "backDep": "16:25"
     },
     {
-     "p": 13938,
+     "p": 13972,
      "air": "中華航空",
      "dep": "10:20",
      "arr": "12:05",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 13977,
+     "fare": 14012,
      "backDep": "14:25"
     },
     {
-     "p": 13938,
+     "p": 13972,
      "air": "中華航空",
      "dep": "11:10",
      "arr": "12:55",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 13977,
+     "fare": 14012,
      "backDep": ""
     },
     {
@@ -1762,24 +1762,24 @@
      "backDep": "15:00"
     },
     {
-     "p": 14154,
-     "air": "中華航空、星宇航空",
-     "dep": "11:10",
-     "arr": "12:55",
+     "p": 14159,
+     "air": "星宇航空、中華航空",
+     "dep": "11:55",
+     "arr": "13:40",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 14194,
+     "fare": 14199,
      "backDep": ""
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 362,
     "err": null
    }
@@ -2014,12 +2014,12 @@
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 370,
     "err": null
    }
@@ -2242,24 +2242,24 @@
      "backDep": ""
     },
     {
-     "p": 16051,
+     "p": 15976,
      "air": "中華航空、日本航空",
      "dep": "14:05",
      "arr": "15:50",
      "dur": "1 小時 45 分鐘",
      "stop": "直達",
      "route": "HKG–TPE",
-     "fare": 16107,
+     "fare": 16023,
      "backDep": ""
     }
    ],
    "ret": null,
-   "ts": "2026-11-08T14:34:59.284Z",
+   "ts": "2026-11-08T14:46:03.497Z",
    "line": {
     "done": true,
     "failed": false,
-    "polls": 2,
-    "doneAtWait": 1,
+    "polls": 3,
+    "doneAtWait": 2,
     "total": 425,
     "err": null
    }
@@ -2268,12 +2268,12 @@
  "stats": {
   "tries": 12,
   "errs": 0,
-  "reqs": 24
+  "reqs": 36
  },
  "meta": {
   "source": "line",
-  "elapsedSec": 65,
-  "waits": 1,
+  "elapsedSec": 127,
+  "waits": 2,
   "waitSec": 60,
   "concurrency": 20,
   "airlines": [
@@ -2286,6 +2286,7 @@
    "NH",
    "OZ",
    "BI"
-  ]
+  ],
+  "stops": 0
  }
 }

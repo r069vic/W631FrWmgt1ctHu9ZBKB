@@ -1,15 +1,16 @@
 line scan TEST pairs=4 jobs=12 shard 0/1: 12; wait 60s x max 5, concurrency 20
 wait 1: 12 pending, sleeping 60s
-done 11/12 with price, failed 0, not complete after 5 waits 0, requests 24, 65s
-KIX>NRT  2026-11-15 2027-02-17  94d  p= 17699  長榮航空         total=204 polls=2 done=true@wait1
-KIX>NRT  2026-12-06 2027-06-09 185d  p= 18043  星宇航空         total=225 polls=2 done=true@wait1
-KIX>NRT  2027-02-07 2027-08-11 185d  p= 17723  星宇航空         total=236 polls=2 done=true@wait1
-NRT>KIX  2026-11-15 2027-02-17  94d  p= 15515  中華航空         total=169 polls=2 done=true@wait1
-NRT>KIX  2026-12-06 2027-06-09 185d  p= 13780  中華航空         total=191 polls=2 done=true@wait1
-NRT>KIX  2027-02-07 2027-08-11 185d  p= 18463  長榮航空         total=203 polls=2 done=true@wait1
-FUK>HND  2026-11-15 2027-02-17  94d  p= 17099  中華航空         total=2 polls=2 done=true@wait1
-FUK>HND  2026-12-06 2027-06-09 185d  p=  null               total=0 polls=2 done=true@wait1
-FUK>HND  2027-02-07 2027-08-11 185d  p= 27865  中華航空         total=2 polls=2 done=true@wait1
-HKG>NRT  2026-11-15 2027-02-17  94d  p=  7474  長榮航空         total=362 polls=2 done=true@wait1
-HKG>NRT  2026-12-06 2027-06-09 185d  p=  7524  長榮航空         total=370 polls=2 done=true@wait1
-HKG>NRT  2027-02-07 2027-08-11 185d  p= 10461  長榮航空         total=425 polls=2 done=true@wait1
+wait 2: 12 pending, sleeping 60s
+done 11/12 with price, failed 0, not complete after 5 waits 0, requests 36, 127s
+KIX>NRT  2026-11-15 2027-02-17  94d  p= 17699  長榮航空         total=204 polls=3 done=true@wait2
+KIX>NRT  2026-12-06 2027-06-09 185d  p= 18043  星宇航空         total=225 polls=3 done=true@wait2
+KIX>NRT  2027-02-07 2027-08-11 185d  p= 17723  星宇航空         total=235 polls=3 done=true@wait2
+NRT>KIX  2026-11-15 2027-02-17  94d  p= 15515  中華航空         total=169 polls=3 done=true@wait2
+NRT>KIX  2026-12-06 2027-06-09 185d  p= 13780  中華航空         total=193 polls=3 done=true@wait2
+NRT>KIX  2027-02-07 2027-08-11 185d  p= 18463  長榮航空         total=57 polls=3 done=true@wait2
+FUK>HND  2026-11-15 2027-02-17  94d  p= 17099  中華航空         total=2 polls=3 done=true@wait2
+FUK>HND  2026-12-06 2027-06-09 185d  p=  null               total=0 polls=3 done=true@wait2
+FUK>HND  2027-02-07 2027-08-11 185d  p= 27865  中華航空         total=2 polls=3 done=true@wait2
+HKG>NRT  2026-11-15 2027-02-17  94d  p=  7474  長榮航空         total=362 polls=3 done=true@wait2
+HKG>NRT  2026-12-06 2027-06-09 185d  p=  7524  長榮航空         total=370 polls=3 done=true@wait2
+HKG>NRT  2027-02-07 2027-08-11 185d  p= 10461  長榮航空         total=425 polls=3 done=true@wait2
