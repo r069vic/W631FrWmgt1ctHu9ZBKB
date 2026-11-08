@@ -21,6 +21,8 @@ const AIRPORTS = MODE === 'multi' && arg('pairs', '') ? arg('pairs', '').split('
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = [95, 185];
+// --stops N adds the per-leg max-stops field (5) to the Google query; unset = no filter
+const STOPS = arg('stops', '') === '' ? null : +arg('stops', '');
 const HORIZON_DAYS = 328; // Google Flights shows about 11 months ahead
 
 const DAY = 864e5, iso = (t) => new Date(t).toISOString().slice(0, 10), dow = (t) => new Date(t).getUTCDay();
@@ -57,7 +59,7 @@ const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
 // trip type (field 19): 1 = round trip, 3 = multi-city
 const tfs = (key, out, back) => {
   const [XY, hub = 'TPE'] = key.split('@'); const [X, Y = X] = XY.split('>'); const AIR = AIRLINES[key] || FULL;
-  const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
+  const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...(STOPS === null ? [] : [num(5, STOPS)]), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
   return Buffer.concat([leg(X, hub, out), leg(hub, Y, back), num(8, 1), num(9, 1), num(19, X === Y ? 1 : 3)]).toString('base64url');
 };
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });

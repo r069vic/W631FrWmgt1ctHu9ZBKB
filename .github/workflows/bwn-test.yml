@@ -1,5 +1,5 @@
 name: bwn-test
-# One-off: does Brunei (BWN) have results on LINE Travel and on Google Flights? Runs only on pushes to line-scan-test touching this file, or by hand.
+# One-off: does the Google per-leg max-stops field (5) restrict results to nonstop? Pushes to line-scan-test touching this file, or by hand.
 on:
   push:
     branches: [line-scan-test]
@@ -11,28 +11,14 @@ permissions:
 concurrency:
   group: bwn-test
   cancel-in-progress: false
-env:
-  PAIRS: BWN>NRT,NRT>BWN,BWN>HKG,HKG>BWN
 jobs:
-  line:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: |
-          mkdir -p test-out
-          node scan_line.mjs --test --pairs "$PAIRS" --stops 0 --out test-out/bwn-line-nonstop.json 2>&1 | tee test-out/bwn-line-nonstop.log
-          node scan_line.mjs --test --pairs "$PAIRS" --stops 1 --out test-out/bwn-line-1stop.json 2>&1 | tee test-out/bwn-line-1stop.log
-          node scan_line.mjs --test --pairs "$PAIRS" --stops 0 --airlines ANY --out test-out/bwn-line-anyair.json 2>&1 | tee test-out/bwn-line-anyair.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with: { name: line-out, path: test-out/ }
   google:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        stops: ['0', '1']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,22 +27,10 @@ jobs:
       - run: npm install --no-save puppeteer-core
       - run: |
           mkdir -p test-out
-          node scan.mjs --mode multi --pairs "$PAIRS" --shard 0 --shards 8 --out test-out/bwn-google.json 2>&1 | tee test-out/bwn-google.log
+          node scan.mjs --mode multi --pairs "NRT>BWN,HKG>BWN,BWN>HKG" --stops ${{ matrix.stops }} --shard 0 --shards 8 --out test-out/bwn-g2-stops${{ matrix.stops }}.json 2>&1 | tee test-out/bwn-g2-stops${{ matrix.stops }}.log
         env:
           CHROME_PATH: /usr/bin/google-chrome
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with: { name: google-out, path: test-out/ }
-  commit:
-    needs: [line, google]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with: { path: dl }
       - run: |
-          mkdir -p test-out && cp dl/*/* test-out/ 2>/dev/null || true
           git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
-          git add -f test-out/bwn-*; git commit -m "bwn-test output" || echo none
-          git pull --rebase -q origin line-scan-test; git push origin HEAD:line-scan-test
+          git add -f test-out/bwn-g2-*; git commit -m "bwn-g2 stops${{ matrix.stops }}" || echo none
+          for i in 1 2 3; do git pull --rebase -q origin line-scan-test && git push origin HEAD:line-scan-test && break; sleep 5; done
