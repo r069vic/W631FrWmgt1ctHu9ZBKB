@@ -1,34 +1,17 @@
-calendar kinds=lrt,low1 jobs=8 shard 0/1: 8
+calendar kinds=lrt jobs=3 shard 0/1: 3
   dbg lrt OIT try 1 opened: cells 0 label "5 日行程" first 2026-11-01
   dbg lrt OIT len 5 label "5 日行程" days 0 first 2026-11-01
   dbg lrt OIT len 6 label "6 日行程" days 0 first 2026-11-01
-  dbg lrt OIT len 7 label "7 日行程" days 83 first 2026-11-01
-1/8 lrt OIT 5:0 6:0 7:83
-  dbg lrt KIX try 1 opened: cells 53 label "5 日行程" first 2026-11-01
-  dbg lrt KIX len 5 label "5 日行程" days 294 first 2026-11-01
-  dbg lrt KIX len 6 label "6 日行程" days 293 first 2026-11-01
-  dbg lrt KIX len 7 label "7 日行程" days 292 first 2026-11-01
-2/8 lrt KIX 5:294 6:293 7:292
-  dbg lrt OKA try 1 opened: cells 53 label "5 日行程" first 2026-11-01
-  dbg lrt OKA len 5 label "5 日行程" days 295 first 2026-11-01
-  dbg lrt OKA len 6 label "6 日行程" days 294 first 2026-11-01
-  dbg lrt OKA len 7 label "7 日行程" days 292 first 2026-11-01
-3/8 lrt OKA 5:295 6:294 7:292
-  dbg lrt FUK try 1 opened: cells 49 label "5 日行程" first 2026-11-01
-  dbg lrt FUK len 5 label "5 日行程" days 291 first 2026-11-01
-  dbg lrt FUK len 6 label "6 日行程" days 291 first 2026-11-01
-  dbg lrt FUK len 7 label "7 日行程" days 290 first 2026-11-01
-4/8 lrt FUK 5:291 6:291 7:290
-  dbg low1 OIT try 1 opened: cells 14 label "" first 2026-11-01
-  dbg low1 OIT len 0 label "" days 85 first 2026-11-01
-5/8 low1 OIT 0:85
-  dbg low1 KIX try 1 opened: cells 53 label "" first 2026-11-01
-  dbg low1 KIX len 0 label "" days 233 first 2026-11-01
-6/8 low1 KIX 0:233
-  dbg low1 OKA try 1 opened: cells 53 label "" first 2026-11-01
-  dbg low1 OKA len 0 label "" days 300 first 2026-11-01
-7/8 low1 OKA 0:300
-  dbg low1 FUK try 1 opened: cells 50 label "" first 2026-11-01
-  dbg low1 FUK len 0 label "" days 298 first 2026-11-01
-8/8 low1 FUK 0:298
-done 14/16 with prices, google errors 0/8
+  dbg lrt OIT len 7 label "7 日行程" days 40 first 2026-11-01
+1/3 lrt OIT 5:0 6:0 7:40
+  dbg lrt YGJ try 1 opened: cells 0 label "5 日行程" first 2026-11-01
+  dbg lrt YGJ len 5 label "5 日行程" days 0 first 2026-11-01
+  dbg lrt YGJ len 6 label "6 日行程" days 0 first 2026-11-01
+  dbg lrt YGJ len 7 label "7 日行程" days 80 first 2026-11-01
+2/3 lrt YGJ 5:0 6:0 7:80
+  dbg lrt KCZ try 1 opened: cells 0 label "5 日行程" first 2026-11-01
+  dbg lrt KCZ len 5 label "5 日行程" days 0 first 2026-11-01
+  dbg lrt KCZ len 6 label "6 日行程" days 0 first 2026-11-01
+  dbg lrt KCZ len 7 label "7 日行程" days 80 first 2026-11-01
+3/3 lrt KCZ 5:0 6:0 7:80
+done 3/9 with prices, google errors 0/3
