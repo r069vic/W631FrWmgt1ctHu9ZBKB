@@ -1,14 +1,14 @@
 name: cal
 # Calendar scan: Google Flights date-picker prices for every departure day, nonstop.
 # Full-service (same, rt, ow1, ow2) - Taipei time: 00:30 everything, 10:30 round trips + one-ways, 12:30 same-station.
-# Low-cost carriers (lrt, low1, low2: Japan / Korea / Hong Kong) - Taipei time: 01:45 and 13:45.
+# Low-cost carriers (lrt, low1, low2: Japan / Korea / Hong Kong) - every 2 hours at :45 Taipei time (01:45, 03:45 ... 23:45),
+# which stays clear of the full-service runs above (one run takes about 10-12 minutes).
 on:
   schedule:
     - cron: '30 16 * * *'
     - cron: '30 2 * * *'
     - cron: '30 4 * * *'
-    - cron: '45 17 * * *'
-    - cron: '45 5 * * *'
+    - cron: '45 1-23/2 * * *'
   workflow_dispatch:
     inputs:
       kinds:
@@ -40,7 +40,7 @@ jobs:
           case "${{ github.event.schedule }}" in
             '30 2 * * *') kinds=rt,ow1,ow2 ;;
             '30 4 * * *') kinds=same ;;
-            '45 17 * * *'|'45 5 * * *') kinds=lrt,low1,low2 ;;
+            '45 1-23/2 * * *') kinds=lrt,low1,low2 ;;
             *) kinds="${{ inputs.kinds }}"; kinds="${kinds:-same,rt,ow1,ow2}" ;;
           esac
           node scan_cal.mjs --kinds "$kinds" --airports "${{ inputs.airports }}" --shard ${{ matrix.shard }} --shards 5 --out results/cal-${{ matrix.shard }}.json
