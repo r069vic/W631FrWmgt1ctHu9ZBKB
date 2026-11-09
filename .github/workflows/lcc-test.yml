@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-save puppeteer-core
-      - run: mkdir -p results && node scan_cal.mjs --kinds lrt,low1 --airports OIT,KIX,OKA,FUK --out results/cal-0.json 2>&1 | tee results/debug.log
+      - run: mkdir -p results && node scan_cal.mjs --kinds lrt --airports OIT,YGJ,KCZ --out results/cal-0.json 2>&1 | tee results/debug.log
         env:
           CHROME_PATH: /usr/bin/google-chrome
           CAL_DEBUG: '1'
