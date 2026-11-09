@@ -17,7 +17,8 @@ const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,KUL,SIN,SGN,HAN,DAD
 const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ', 'CX', 'BI']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana, Cathay, Royal Brunei
 // Tigerair Taiwan, Peach, Jetstar Japan, ZIPAIR, Spring Japan, Jeju Air, T'way, Air Busan, Jin Air, Air Seoul, Eastar Jet, HK Express
 const LCC = ['IT', 'MM', 'GK', 'ZG', 'IJ', '7C', 'TW', 'BX', 'LJ', 'RS', 'ZE', 'UO'];
-const LCC_ALL = 'NRT,HND,KIX,NGO,FUK,CTS,OKA,OKJ,KMJ,TAK,SDJ,HKD,IBR,KOJ,ICN,GMP,PUS,CJU,TAE,HKG'.split(',');
+// Japan incl. the small airports Tigerair Taiwan flies from Taipei (ISG, KMQ, KCZ, YGJ, HSG, OIT, KMI, KIJ, AXT, HNA, FKS)
+const LCC_ALL = 'NRT,HND,KIX,NGO,FUK,CTS,OKA,OKJ,KMJ,TAK,SDJ,HKD,IBR,KOJ,ISG,KMQ,KCZ,YGJ,HSG,OIT,KMI,KIJ,AXT,HNA,FKS,ICN,GMP,PUS,CJU,TAE,HKG'.split(',');
 const isL = (k) => /^l(rt|ow1|ow2)$/.test(k), baseOf = (k) => (isL(k) ? k.slice(1) : k);
 const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
 const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0], lrt: [5, 6, 7], low1: [0], low2: [0] };
