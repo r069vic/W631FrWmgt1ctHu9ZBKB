@@ -33,7 +33,7 @@ const DAY = 864e5, iso = (t) => new Date(t).toISOString().slice(0, 10);
 const tomorrow = iso(Date.now() + DAY);
 const jobs = [];
 for (const k of KINDS) for (const a of airportsOf(k)) {
-  if (baseOf(k) === 'rt') jobs.push({ k, a, lens: LENS.rt });
+  if (baseOf(k) === 'rt') jobs.push({ k, a, lens: LENS[k] });
   else if (k === 'same') for (const c of CENTERS) jobs.push({ k, a, lens: range(c), center: c });
   else for (const L of LENS[k]) jobs.push({ k, a, lens: [L] });
 }
