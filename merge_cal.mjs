@@ -42,7 +42,11 @@ for (const r of recs) {
 // a day can have several runs with different kinds: keep what earlier runs of today stored for other routes
 const todayFile = join('data/cal', today + '.json.gz');
 const prevToday = existsSync(todayFile) ? JSON.parse(gunzipSync(readFileSync(todayFile)).toString()) : {};
-writeFileSync(todayFile, gzipSync(JSON.stringify({ ...prevToday, ...todayHist })));
+// same route read by several runs today: keep the union of departure days (a later partial read must not drop days an
+// earlier run of the same day saw; for a day both runs priced, the later price wins)
+const merged = { ...prevToday };
+for (const [k, m] of Object.entries(todayHist)) merged[k] = { ...(prevToday[k] || {}), ...m };
+writeFileSync(todayFile, gzipSync(JSON.stringify(merged)));
 mkdirSync('out', { recursive: true });
 for (const [kind, routes] of Object.entries(byKind)) writeFileSync(`out/cal-${kind}.json`, JSON.stringify({ kind, day: today, stats, routes }));
 console.log(`calendar day=${today} series=${recs.length} priced=${priced} days with baseline=${based} google errors ${stats.errs}/${stats.tries}`);

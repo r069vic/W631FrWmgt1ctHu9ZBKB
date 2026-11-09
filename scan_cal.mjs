@@ -8,8 +8,9 @@
 // Keys: 'X' (Taoyuan) or 'X@TSA' (Songshan).
 // node scan_cal.mjs --kinds same,rt,ow1,ow2 --airports KIX,BKK --shard 0 --shards 5 --out results/cal-0.json
 import puppeteer from 'puppeteer-core';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { writeFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
+import { dirname, join } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 // DMK (Bangkok Don Mueang) is left out: none of the seven carriers fly there.
@@ -127,22 +128,37 @@ async function scanLens(j, out, tries) {
     if (!j.lens.some((L) => out[L])) await sleep(5000 * at);
   }
 }
-// A round-trip length that came back empty is read once more on its own page, but only on routes flown every day
-// (another length has 200+ priced days); on routes flown a few times a week some lengths are empty for real.
-const REFILL_MIN_DAYS = 200;
+// A length that came back short is read once more on its own page (one extra page load per length at most):
+//  - daily routes: another length of the same route has 200+ priced days and this one has less than half of that
+//    (on routes flown a few times a week some lengths are empty for real, so they are not re-read);
+//  - any route: less than half of the priced days the last runs got for the same route and length (needs 20+ before).
+const REFILL_MIN_DAYS = 200, PREV_MIN_DAYS = 20;
+// days per "kind|airport|length" in the last 3 history files (data/cal/<day>.json.gz, written by merge_cal.mjs)
+const prevDays = {};
+try {
+  for (const f of readdirSync('data/cal').filter((x) => /^\d{4}-\d{2}-\d{2}\.json\.gz$/.test(x)).sort().slice(-3)) {
+    const day = JSON.parse(gunzipSync(readFileSync(join('data/cal', f))).toString());
+    for (const [k, m] of Object.entries(day)) prevDays[k] = Math.max(prevDays[k] || 0, Object.keys(m).length);
+  }
+} catch {}
 stats.refills = 0; stats.refilled = 0;
-if (STAGGER) await sleep(Math.random() * STAGGER * 1000);
 for (const j of mine) {
   if (n > 0 && GAP) await sleep(GAP * (0.5 + Math.random()) * 1000);
   if (n > 0 && n % 15 === 0) { await b.close().catch(() => {}); b = await launch(); }
   const out = {};
   // up to 4 tries: Google answers a share of page loads with its error page
   await scanLens(j, out, 4);
-  if (!j.center && j.lens.length > 1 && Math.max(0, ...j.lens.map((L) => (out[L] || []).length)) >= REFILL_MIN_DAYS) {
-    for (const L of j.lens.filter((L) => !out[L])) {
-      stats.refills++; await scanLens({ ...j, lens: [L] }, out, 1);
-      if (out[L]) stats.refilled++;
-      dbg(j.k, j.a, 'refill', L, out[L] ? out[L].length : 0);
+  if (!j.center) {
+    const cnt = (L) => (out[L] || []).length, most = Math.max(0, ...j.lens.map(cnt));
+    const short = j.lens.filter((L) => {
+      const prev = prevDays[`${j.k}|${j.a}|${L}`] || 0;
+      return (j.lens.length > 1 && most >= REFILL_MIN_DAYS && cnt(L) < most / 2) || (prev >= PREV_MIN_DAYS && cnt(L) < prev / 2);
+    });
+    for (const L of short) {
+      const extra = {}; stats.refills++;
+      await scanLens({ ...j, lens: [L] }, extra, 1);
+      if ((extra[L] || []).length > cnt(L)) { out[L] = Object.entries({ ...Object.fromEntries(out[L] || []), ...Object.fromEntries(extra[L]) }).sort(); stats.refilled++; }
+      dbg(j.k, j.a, 'refill', L, 'now', cnt(L));
     }
   }
   if (j.center) {
