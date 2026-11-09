@@ -1,5 +1,5 @@
 name: lcc-test
-# rerun 2
+# rerun 3
 # One-off debug: why low-cost round trips (lrt) come back empty. Runs on pushes to lcc-test only; uploads nothing.
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-save puppeteer-core
-      - run: mkdir -p results && node scan_cal.mjs --kinds lrt --airports OIT,YGJ,KCZ --out results/cal-0.json 2>&1 | tee results/debug.log
+      - run: mkdir -p results && node scan_cal.mjs --kinds lrt --airports OKA,NGO,KIX,OIT --out results/cal-0.json 2>&1 | tee results/debug.log
         env:
           CHROME_PATH: /usr/bin/google-chrome
           CAL_DEBUG: '1'
