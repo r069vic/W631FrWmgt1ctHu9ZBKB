@@ -91,6 +91,7 @@ async function readAll(p, map) {
 }
 
 const stats = { tries: 0, errs: 0 };
+const DEBUG = !!process.env.CAL_DEBUG; const dbg = (...x) => DEBUG && console.log('  dbg', ...x);
 let b = await launch(); const results = []; let n = 0;
 for (const j of mine) {
   if (n > 0 && n % 15 === 0) { await b.close().catch(() => {}); b = await launch(); }
@@ -104,20 +105,23 @@ for (const j of mine) {
       const dep = await p.waitForFunction(() => [...document.querySelectorAll('input')].find((x) => x.getAttribute('aria-label') === '去程' && x.offsetParent), { timeout: 30000 });
       await dep.asElement().click();
       for (let i = 0; i < 15; i++) { await sleep(700); if ((await readCells(p)).length) break; }
+      dbg(j.k, j.a, 'try', at, 'opened: cells', (await readCells(p)).length, 'label', JSON.stringify(await lenLabel(p)), 'first', await firstShown(p));
       for (let li = 0; li < j.lens.length; li++) {
         const L = j.lens[li];
         if (li > 0) {
           // switch the trip length in place; read from wherever the calendar now is
           await nextLen(p);
           for (let i = 0; i < 15 && !(await lenLabel(p)).startsWith(L + ' '); i++) await sleep(500);
-          if (!(await lenLabel(p)).startsWith(L + ' ')) break;
+          if (!(await lenLabel(p)).startsWith(L + ' ')) { dbg(j.k, j.a, 'switch to', L, 'failed, label', JSON.stringify(await lenLabel(p))); break; }
           await sleep(1500);
         }
         // after a switch Google usually shows the first month again; read backward only if it stayed at the end
         const map = {}; if (li > 0 && (await firstShown(p)) > tomorrow) await readBack(p, map); else await readAll(p, map);
         if (Object.keys(map).length) out[L] = Object.entries(map).sort();
+        dbg(j.k, j.a, 'len', L, 'label', JSON.stringify(await lenLabel(p)), 'days', Object.keys(map).length, 'first', await firstShown(p));
+        if (DEBUG && !Object.keys(map).length) await p.screenshot({ path: `results/dbg-${j.k}-${j.a}-${L}-try${at}.png` }).catch(() => {});
       }
-    } catch {} finally { await p.close().catch(() => {}); }
+    } catch (e) { dbg(j.k, j.a, 'try', at, 'error', String(e).slice(0, 120)); } finally { await p.close().catch(() => {}); }
     if (!Object.keys(out).length) await sleep(2000 * at);
   }
   if (j.center) {
