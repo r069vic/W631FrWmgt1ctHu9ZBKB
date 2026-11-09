@@ -21,7 +21,7 @@ const LCC = ['IT', 'MM', 'GK', 'ZG', 'IJ', '7C', 'TW', 'BX', 'LJ', 'RS', 'ZE', '
 const LCC_ALL = 'NRT,HND,KIX,NGO,FUK,CTS,OKA,OKJ,KMJ,TAK,SDJ,HKD,IBR,KOJ,ISG,KMQ,KCZ,YGJ,HSG,OIT,KMI,KIJ,AXT,HNA,FKS,ICN,GMP,PUS,CJU,TAE,HKG'.split(',');
 const isL = (k) => /^l(rt|ow1|ow2)$/.test(k), baseOf = (k) => (isL(k) ? k.slice(1) : k);
 const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
-const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0], lrt: [5, 6, 7], low1: [0], low2: [0] };
+const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0], lrt: [3, 4, 5, 6, 7], low1: [0], low2: [0] }; // LCC round trips 3-7 days: routes flown 2-3 times a week match only some lengths
 const KINDS = arg('kinds', 'same,rt,ow1,ow2').split(',').filter((k) => LENS[k]);
 const AIRPORTS_ARG = arg('airports', '').split(',').filter(Boolean);
 const airportsOf = (k) => AIRPORTS_ARG.length ? AIRPORTS_ARG.filter((a) => !isL(k) || !a.includes('@')) : isL(k) ? LCC_ALL : ALL;
@@ -96,7 +96,8 @@ let b = await launch(); const results = []; let n = 0;
 for (const j of mine) {
   if (n > 0 && n % 15 === 0) { await b.close().catch(() => {}); b = await launch(); }
   const out = {};
-  for (let at = 1; at <= 3 && !Object.keys(out).length; at++) {
+  // up to 4 tries: Google answers a share of page loads with its error page
+  for (let at = 1; at <= 4 && !Object.keys(out).length; at++) {
     const p = await b.newPage(); stats.tries++;
     try {
       await p.setExtraHTTPHeaders({ 'Accept-Language': 'zh-TW' }); await p.setViewport({ width: 1300, height: 1500 });
@@ -122,7 +123,7 @@ for (const j of mine) {
         if (DEBUG && !Object.keys(map).length) await p.screenshot({ path: `results/dbg-${j.k}-${j.a}-${L}-try${at}.png` }).catch(() => {});
       }
     } catch (e) { dbg(j.k, j.a, 'try', at, 'error', String(e).slice(0, 120)); } finally { await p.close().catch(() => {}); }
-    if (!Object.keys(out).length) await sleep(2000 * at);
+    if (!Object.keys(out).length) await sleep(5000 * at);
   }
   if (j.center) {
     // cheapest per departure day across the lengths; entries are [date, price, length]
