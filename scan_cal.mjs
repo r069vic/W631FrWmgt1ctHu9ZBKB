@@ -93,11 +93,10 @@ async function readAll(p, map) {
 const stats = { tries: 0, errs: 0 };
 const DEBUG = !!process.env.CAL_DEBUG; const dbg = (...x) => DEBUG && console.log('  dbg', ...x);
 let b = await launch(); const results = []; let n = 0;
-for (const j of mine) {
-  if (n > 0 && n % 15 === 0) { await b.close().catch(() => {}); b = await launch(); }
-  const out = {};
-  // up to 4 tries: Google answers a share of page loads with its error page
-  for (let at = 1; at <= 4 && !Object.keys(out).length; at++) {
+// Opens the calendar for job j (first length j.lens[0]) and reads every length in j.lens into out[L].
+// Retries the whole page up to `tries` times while nothing at all was read.
+async function scanLens(j, out, tries) {
+  for (let at = 1; at <= tries && !j.lens.some((L) => out[L]); at++) {
     const p = await b.newPage(); stats.tries++;
     try {
       await p.setExtraHTTPHeaders({ 'Accept-Language': 'zh-TW' }); await p.setViewport({ width: 1300, height: 1500 });
@@ -123,7 +122,24 @@ for (const j of mine) {
         if (DEBUG && !Object.keys(map).length) await p.screenshot({ path: `results/dbg-${j.k}-${j.a}-${L}-try${at}.png` }).catch(() => {});
       }
     } catch (e) { dbg(j.k, j.a, 'try', at, 'error', String(e).slice(0, 120)); } finally { await p.close().catch(() => {}); }
-    if (!Object.keys(out).length) await sleep(5000 * at);
+    if (!j.lens.some((L) => out[L])) await sleep(5000 * at);
+  }
+}
+// A round-trip length that came back empty is read once more on its own page, but only on routes flown every day
+// (another length has 200+ priced days); on routes flown a few times a week some lengths are empty for real.
+const REFILL_MIN_DAYS = 200;
+stats.refills = 0; stats.refilled = 0;
+for (const j of mine) {
+  if (n > 0 && n % 15 === 0) { await b.close().catch(() => {}); b = await launch(); }
+  const out = {};
+  // up to 4 tries: Google answers a share of page loads with its error page
+  await scanLens(j, out, 4);
+  if (!j.center && j.lens.length > 1 && Math.max(0, ...j.lens.map((L) => (out[L] || []).length)) >= REFILL_MIN_DAYS) {
+    for (const L of j.lens.filter((L) => !out[L])) {
+      stats.refills++; await scanLens({ ...j, lens: [L] }, out, 1);
+      if (out[L]) stats.refilled++;
+      dbg(j.k, j.a, 'refill', L, out[L] ? out[L].length : 0);
+    }
   }
   if (j.center) {
     // cheapest per departure day across the lengths; entries are [date, price, length]
@@ -135,4 +151,4 @@ for (const j of mine) {
   mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, JSON.stringify({ mode: 'cal', results, stats })); // keep progress if the job is cut off
 }
 await b.close();
-console.log(`done ${results.filter((r) => r.prices.length).length}/${results.length} with prices, google errors ${stats.errs}/${stats.tries}`);
+console.log(`done ${results.filter((r) => r.prices.length).length}/${results.length} with prices, google errors ${stats.errs}/${stats.tries}, refilled lengths ${stats.refilled}/${stats.refills}`);
