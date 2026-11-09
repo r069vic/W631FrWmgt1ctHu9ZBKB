@@ -4,6 +4,7 @@
 //         (Google has no cached price for many single long-stay lengths; the union covers about 80% of days)
 //   rt    TPE>X ... X>TPE, 5 / 6 / 7 days (one page; the trip length is switched in the calendar)
 //   ow1   TPE>X one-way      ow2   X>TPE one-way
+// Low-cost carrier kinds (廉航 tabs): lrt / low1 / low2 = rt / ow1 / ow2 on Taiwan, Japan, Korea and Hong Kong LCCs, Japan/Korea/HK airports.
 // Keys: 'X' (Taoyuan) or 'X@TSA' (Songshan).
 // node scan_cal.mjs --kinds same,rt,ow1,ow2 --airports KIX,BKK --shard 0 --shards 5 --out results/cal-0.json
 import puppeteer from 'puppeteer-core';
@@ -14,10 +15,15 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ?
 // DMK (Bangkok Don Mueang) is left out: none of the seven carriers fly there.
 const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,BWN,HND@TSA,GMP@TSA'.split(',');
 const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ', 'CX', 'BI']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana, Cathay, Royal Brunei
+// Tigerair Taiwan, Peach, Jetstar Japan, ZIPAIR, Spring Japan, Jeju Air, T'way, Air Busan, Jin Air, Air Seoul, Eastar Jet, HK Express
+const LCC = ['IT', 'MM', 'GK', 'ZG', 'IJ', '7C', 'TW', 'BX', 'LJ', 'RS', 'ZE', 'UO'];
+const LCC_ALL = 'NRT,HND,KIX,NGO,FUK,CTS,OKA,OKJ,KMJ,TAK,SDJ,HKD,IBR,KOJ,ICN,GMP,PUS,CJU,TAE,HKG'.split(',');
+const isL = (k) => /^l(rt|ow1|ow2)$/.test(k), baseOf = (k) => (isL(k) ? k.slice(1) : k);
 const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
-const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0] };
+const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0], lrt: [5, 6, 7], low1: [0], low2: [0] };
 const KINDS = arg('kinds', 'same,rt,ow1,ow2').split(',').filter((k) => LENS[k]);
-const AIRPORTS = (arg('airports', '') || ALL.join(',')).split(',').filter(Boolean);
+const AIRPORTS_ARG = arg('airports', '').split(',').filter(Boolean);
+const airportsOf = (k) => AIRPORTS_ARG.length ? AIRPORTS_ARG.filter((a) => !isL(k) || !a.includes('@')) : isL(k) ? LCC_ALL : ALL;
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/cal-${SHARD}.json`);
 const MAX_FLIPS = 12;
@@ -25,13 +31,13 @@ const MAX_FLIPS = 12;
 const DAY = 864e5, iso = (t) => new Date(t).toISOString().slice(0, 10);
 const tomorrow = iso(Date.now() + DAY);
 const jobs = [];
-for (const k of KINDS) for (const a of AIRPORTS) {
-  if (k === 'rt') jobs.push({ k, a, lens: LENS.rt });
+for (const k of KINDS) for (const a of airportsOf(k)) {
+  if (baseOf(k) === 'rt') jobs.push({ k, a, lens: LENS.rt });
   else if (k === 'same') for (const c of CENTERS) jobs.push({ k, a, lens: range(c), center: c });
   else for (const L of LENS[k]) jobs.push({ k, a, lens: [L] });
 }
 const mine = jobs.filter((_, i) => i % SHARDS === SHARD);
-console.log(`calendar kinds=${KINDS.join(',')} airports=${AIRPORTS.length} jobs=${jobs.length} shard ${SHARD}/${SHARDS}: ${mine.length}`);
+console.log(`calendar kinds=${KINDS.join(',')} jobs=${jobs.length} shard ${SHARD}/${SHARDS}: ${mine.length}`);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const varint = (n) => { const o = []; while (n > 127) { o.push((n & 127) | 128); n = Math.floor(n / 128); } o.push(n); return Buffer.from(o); };
@@ -40,11 +46,11 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), num(5, 0) /* nonstop only */, ...FULL.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
+const leg = (f, t, d, air = FULL) => msg(3, Buffer.concat([str(2, d), num(5, 0) /* nonstop only */, ...air.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
 // the search that opens the calendar: first departure tomorrow, return after the first trip length
 const tfs = (j) => {
-  const [X, H = 'TPE'] = j.a.split('@'), L = j.lens[0], back = iso(Date.parse(tomorrow) + L * DAY);
-  const legs = j.k === 'same' ? [leg(X, H, tomorrow), leg(H, X, back)] : j.k === 'rt' ? [leg(H, X, tomorrow), leg(X, H, back)] : j.k === 'ow1' ? [leg(H, X, tomorrow)] : [leg(X, H, tomorrow)];
+  const [X, H = 'TPE'] = j.a.split('@'), L = j.lens[0], back = iso(Date.parse(tomorrow) + L * DAY), k = baseOf(j.k), air = isL(j.k) ? LCC : FULL;
+  const legs = k === 'same' ? [leg(X, H, tomorrow, air), leg(H, X, back, air)] : k === 'rt' ? [leg(H, X, tomorrow, air), leg(X, H, back, air)] : k === 'ow1' ? [leg(H, X, tomorrow, air)] : [leg(X, H, tomorrow, air)];
   return Buffer.concat([...legs, num(8, 1), num(9, 1), num(19, L ? 1 : 2)]).toString('base64url');
 };
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
