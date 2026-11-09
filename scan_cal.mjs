@@ -28,6 +28,8 @@ const airportsOf = (k) => AIRPORTS_ARG.length ? AIRPORTS_ARG.filter((a) => !isL(
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/cal-${SHARD}.json`);
 const MAX_FLIPS = 12;
+// spread the load: wait a random 0..STAGGER s before the first job and GAP/2..GAP*1.5 s between jobs
+const STAGGER = +arg('stagger', 0), GAP = +arg('gap', 0);
 
 const DAY = 864e5, iso = (t) => new Date(t).toISOString().slice(0, 10);
 const tomorrow = iso(Date.now() + DAY);
@@ -129,7 +131,9 @@ async function scanLens(j, out, tries) {
 // (another length has 200+ priced days); on routes flown a few times a week some lengths are empty for real.
 const REFILL_MIN_DAYS = 200;
 stats.refills = 0; stats.refilled = 0;
+if (STAGGER) await sleep(Math.random() * STAGGER * 1000);
 for (const j of mine) {
+  if (n > 0 && GAP) await sleep(GAP * (0.5 + Math.random()) * 1000);
   if (n > 0 && n % 15 === 0) { await b.close().catch(() => {}); b = await launch(); }
   const out = {};
   // up to 4 tries: Google answers a share of page loads with its error page
