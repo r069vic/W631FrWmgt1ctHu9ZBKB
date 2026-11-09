@@ -7,8 +7,8 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
-const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS'.split(',');
-const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana
+const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,BWN'.split(',');
+const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ', 'CX', 'BI']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana, Cathay, Royal Brunei
 // per-entry config: key 'X' = X<>TPE, 'X@TSA' = X<>TSA (Songshan). Carrier overrides per key.
 const AIRLINES = {};
 const EXTRA = ['HND@TSA', 'GMP@TSA'];
@@ -17,10 +17,13 @@ const MODE = arg('mode', 'broad');
 const SAME_CITY = new Set(['HND>NRT', 'NRT>HND', 'ICN>GMP', 'GMP>ICN', 'BKK>DMK', 'DMK>BKK']);
 const PAIRS = ALL.flatMap((x) => ALL.filter((y) => y !== x).map((y) => x + '>' + y)).filter((k) => !SAME_CITY.has(k));
 const BATCH = +arg('batch', 0), BATCHES = +arg('batches', 1);
-const AIRPORTS = MODE === 'multi' ? PAIRS.filter((_, i) => i % BATCHES === BATCH) : (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
+const AIRPORTS = MODE === 'multi' && arg('pairs', '') ? arg('pairs', '').split(',') : MODE === 'multi' ? PAIRS.filter((_, i) => i % BATCHES === BATCH) : (arg('airports', '') || [...ALL, ...EXTRA].join(',')).split(',').filter(Boolean);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = [95, 185];
+// Nonstop only by default: per-leg max-stops field (5) = 0, as Google's own "僅顯示直達航班" filter writes it. --stops any = no filter.
+// Multi-city: only the first leg carries it (Google filters one leg at a time); the second leg is covered by the LINE scan.
+const STOPS = arg('stops', '0') === 'any' ? null : +arg('stops', '0');
 const HORIZON_DAYS = 328; // Google Flights shows about 11 months ahead
 
 const DAY = 864e5, iso = (t) => new Date(t).toISOString().slice(0, 10), dow = (t) => new Date(t).getUTCDay();
@@ -57,8 +60,8 @@ const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
 // trip type (field 19): 1 = round trip, 3 = multi-city
 const tfs = (key, out, back) => {
   const [XY, hub = 'TPE'] = key.split('@'); const [X, Y = X] = XY.split('>'); const AIR = AIRLINES[key] || FULL;
-  const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
-  return Buffer.concat([leg(X, hub, out), leg(hub, Y, back), num(8, 1), num(9, 1), num(19, X === Y ? 1 : 3)]).toString('base64url');
+  const leg = (f, t, d, st = STOPS) => msg(3, Buffer.concat([str(2, d), ...(st === null ? [] : [num(5, st)]), ...AIR.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
+  return Buffer.concat([leg(X, hub, out), leg(hub, Y, back, X === Y ? STOPS : null), num(8, 1), num(9, 1), num(19, X === Y ? 1 : 3)]).toString('base64url');
 };
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
 

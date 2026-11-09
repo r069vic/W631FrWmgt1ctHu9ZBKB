@@ -12,8 +12,8 @@ import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 // DMK (Bangkok Don Mueang) is left out: none of the seven carriers fly there.
-const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,HND@TSA,GMP@TSA'.split(',');
-const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana
+const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,KUL,SIN,SGN,HAN,DAD,ICN,GMP,PUS,BWN,HND@TSA,GMP@TSA'.split(',');
+const FULL = ['BR', 'CI', 'JX', 'JL', 'NH', 'KE', 'OZ', 'CX', 'BI']; // EVA, China Airlines, STARLUX, JAL, ANA, Korean Air, Asiana, Cathay, Royal Brunei
 const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
 const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0] };
 const KINDS = arg('kinds', 'same,rt,ow1,ow2').split(',').filter((k) => LENS[k]);
@@ -40,7 +40,7 @@ const str = (no, s) => { const b = Buffer.from(s); return field(no, 2, Buffer.co
 const msg = (no, b) => field(no, 2, Buffer.concat([varint(b.length), b]));
 const num = (no, n) => field(no, 0, varint(n));
 const apb = (c) => Buffer.concat([num(1, 1), str(2, c)]);
-const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), ...FULL.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
+const leg = (f, t, d) => msg(3, Buffer.concat([str(2, d), num(5, 0) /* nonstop only */, ...FULL.map((a) => str(6, a)), msg(13, apb(f)), msg(14, apb(t))]));
 // the search that opens the calendar: first departure tomorrow, return after the first trip length
 const tfs = (j) => {
   const [X, H = 'TPE'] = j.a.split('@'), L = j.lens[0], back = iso(Date.parse(tomorrow) + L * DAY);
