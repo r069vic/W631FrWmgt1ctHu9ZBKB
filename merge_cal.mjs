@@ -26,22 +26,30 @@ for (const f of readdirSync('data/cal').filter((x) => /^\d{4}-\d{2}-\d{2}\.json\
 }
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 
-const todayHist = {}, byKind = {};
-let priced = 0, based = 0;
-for (const r of recs) {
-  if (!r.prices.length) continue;
-  priced++;
-  const k = keyOf(r), h = hist[k] || {};
-  todayHist[k] = Object.fromEntries(r.prices);
-  // compact upload: first departure day + parallel arrays (price, baseline or 0) for consecutive days, 0 = no price
-  const d0 = r.prices[0][0], last = r.prices[r.prices.length - 1][0], n = Math.round((Date.parse(last) - Date.parse(d0)) / DAY) + 1;
-  const p = new Array(n).fill(0), b = new Array(n).fill(0), l = new Array(n).fill(0);
-  for (const [dep, v, L] of r.prices) { const i = Math.round((Date.parse(dep) - Date.parse(d0)) / DAY); p[i] = v; if (L) l[i] = L; const o = h[dep]; if (o && o.length >= MIN_OBS) { b[i] = median(o); based++; } }
-  (byKind[r.k] ??= []).push({ k: r.k, a: r.a, len: r.len, d0, p, b, ...(r.k === 'same' ? { l } : {}) });
-}
-// a day can have several runs with different kinds: keep what earlier runs of today stored for other routes
+// a day can have several runs; today's history file holds what the earlier runs of today saw
 const todayFile = join('data/cal', today + '.json.gz');
 const prevToday = existsSync(todayFile) ? JSON.parse(gunzipSync(readFileSync(todayFile)).toString()) : {};
+const todayHist = {}, byKind = {};
+let priced = 0, based = 0, filled = 0;
+for (const r of recs) {
+  const k = keyOf(r), h = hist[k] || {};
+  if (r.prices.length) todayHist[k] = Object.fromEntries(r.prices);
+  // upload the union of today's runs, so a partial read in this run does not shrink the page; for a departure day
+  // both runs priced, this run wins. Not for 'same' (its entries carry the length per day, which history does not keep).
+  let prices = r.prices;
+  if (r.k !== 'same' && prevToday[k]) {
+    const m = { ...prevToday[k], ...Object.fromEntries(r.prices.map(([d, v]) => [d, v])) };
+    if (Object.keys(m).length > r.prices.length) filled++;
+    prices = Object.entries(m).sort();
+  }
+  if (!prices.length) continue;
+  priced++;
+  // compact upload: first departure day + parallel arrays (price, baseline or 0) for consecutive days, 0 = no price
+  const d0 = prices[0][0], last = prices[prices.length - 1][0], n = Math.round((Date.parse(last) - Date.parse(d0)) / DAY) + 1;
+  const p = new Array(n).fill(0), b = new Array(n).fill(0), l = new Array(n).fill(0);
+  for (const [dep, v, L] of prices) { const i = Math.round((Date.parse(dep) - Date.parse(d0)) / DAY); p[i] = v; if (L) l[i] = L; const o = h[dep]; if (o && o.length >= MIN_OBS) { b[i] = median(o); based++; } }
+  (byKind[r.k] ??= []).push({ k: r.k, a: r.a, len: r.len, d0, p, b, ...(r.k === 'same' ? { l } : {}) });
+}
 // same route read by several runs today: keep the union of departure days (a later partial read must not drop days an
 // earlier run of the same day saw; for a day both runs priced, the later price wins)
 const merged = { ...prevToday };
@@ -49,4 +57,4 @@ for (const [k, m] of Object.entries(todayHist)) merged[k] = { ...(prevToday[k] |
 writeFileSync(todayFile, gzipSync(JSON.stringify(merged)));
 mkdirSync('out', { recursive: true });
 for (const [kind, routes] of Object.entries(byKind)) writeFileSync(`out/cal-${kind}.json`, JSON.stringify({ kind, day: today, stats, routes }));
-console.log(`calendar day=${today} series=${recs.length} priced=${priced} days with baseline=${based} google errors ${stats.errs}/${stats.tries}`);
+console.log(`calendar day=${today} series=${recs.length} priced=${priced} (${filled} filled from earlier runs today) days with baseline=${based} google errors ${stats.errs}/${stats.tries}`);
