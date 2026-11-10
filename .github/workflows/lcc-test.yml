@@ -1,32 +1,16 @@
 name: lcc-test
-# rerun 3
-# One-off debug: why low-cost round trips (lrt) come back empty. Runs on pushes to lcc-test only; uploads nothing.
+# One-off: send the new calendar summary to Telegram for the alerts stored since 2026-11-08 (format check).
 on:
   push:
     branches: [lcc-test]
     paths: [.github/workflows/lcc-test.yml]
-permissions:
-  contents: write
 jobs:
-  debug:
+  notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    env:
+      OUTSTATION_URL: ${{ secrets.OUTSTATION_URL }}
+      OUTSTATION_TOKEN: ${{ secrets.OUTSTATION_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install --no-save puppeteer-core
-      - run: mkdir -p results && node scan_cal.mjs --kinds lrt --airports OKA,NGO,KIX,OIT --out results/cal-0.json 2>&1 | tee results/debug.log
-        env:
-          CHROME_PATH: /usr/bin/google-chrome
-          CAL_DEBUG: '1'
-      - if: always()
-        run: |
-          git fetch -q origin lcc-test && git checkout -q -B lcc-test origin/lcc-test
-          mkdir -p test-out && rm -f test-out/dbg-* && cp results/debug.log test-out/lcc-debug.log && cp results/dbg-*.png test-out/ 2>/dev/null || true
-          git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
-          git add -f test-out; git commit -m "lcc debug output" || echo none
-          git push origin HEAD:lcc-test
+      - run: |
+          base="${OUTSTATION_URL%/out/ingest}/cal"
+          curl -sS --fail-with-body -X POST "$base/notify" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" -d '{"since":"2026-11-08T00:00:00.000Z"}'
