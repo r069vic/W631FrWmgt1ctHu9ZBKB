@@ -10,33 +10,18 @@ const html = await (await fetch(URL, { headers: { 'user-agent': 'Mozilla/5.0 (co
 // Next.js 把頁面資料放在 self.__next_f.push([1,"..."]) 的字串裡
 let text = '';
 for (const m of html.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)) { try { text += JSON.parse('"' + m[1] + '"'); } catch {} }
-const at = text.indexOf('{"@type":"ItemList"');
-if (at < 0) { console.error('找不到 ItemList(頁面格式可能改了)'); process.exit(2); }
-let depth = 0, inStr = false, esc = false, end = -1;
-for (let i = at; i < text.length; i++) {
-  const c = text[i];
-  if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
-  if (c === '"') inStr = true; else if (c === '{') depth++; else if (c === '}' && --depth === 0) { end = i + 1; break; }
-}
-const list = JSON.parse(text.slice(at, end));
+// 頁面內嵌的完整清單(235 筆):{"n":1,"origin":"KHH","dest":"HKG","trip_type":"oneway","out_date":..,"in_date":..,"price_twd":..,"airlines":[..],"transfers":0,...}
+const rows = [];
+for (const m of text.matchAll(/\{"n":\d+,"origin":"[^{}]*\}/g)) { try { rows.push(JSON.parse(m[0])); } catch {} }
+if (!rows.length) { console.error('找不到清單資料(頁面格式可能改了)'); process.exit(2); }
 const updated = (html.match(/dateModified\\?":\\?"([^"\\]+)/) || [])[1] || '';
 const day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
-
-const items = [];
-for (const el of list.itemListElement || []) {
-  const o = el.item || {}, io = o.itemOffered || {};
-  const flights = io.subTrip || [io];
-  const f0 = flights[0], fl = flights[flights.length - 1];
-  const from = f0?.departureAirport?.iataCode, to = (flights.length > 1 ? f0 : f0)?.arrivalAirport?.iataCode;
-  const rt = /來回/.test(o.name || '') || flights.length > 1;
-  items.push({
-    n: el.position, name: o.name, from, to, type: rt ? 'rt' : 'ow', dep: f0?.departureTime?.slice(0, 10), ret: rt ? fl?.departureTime?.slice(0, 10) : null,
-    price: o.price, airline: (f0?.provider || []).map((p) => p.name).join('+'), url: o.url,
-    stops: flights.map((f) => f?.numberOfStops ?? null),
-  });
-}
-console.log('items', items.length, 'declared', list.numberOfItems, 'updated', updated);
-console.log('sample', JSON.stringify(items.slice(0, 3)));
+const items = rows.map((r) => ({
+  n: r.n, from: r.origin, to: r.dest, name: `${r.origin}→${r.dest_name || r.dest}`, toName: r.dest_name, cc: r.dest_cc,
+  type: r.trip_type === 'roundtrip' ? 'rt' : 'ow', dep: r.out_date, ret: r.in_date || null, price: r.price_twd, disc: r.discount_pct, tag: r.tag,
+  airline: (r.airlines || []).join('+'), transfers: r.transfers ?? 0, retTransfers: r.return_transfers ?? 0,
+}));
+console.log('items', items.length, 'updated', updated, 'sample', JSON.stringify(items[2]));
 
 // 我們自己的掃描(最近兩天的歷史檔,後者優先)
 const files = readdirSync('data/cal').filter((f) => /^\d{4}-\d{2}-\d{2}\.json\.gz$/.test(f)).sort().slice(-2);
@@ -60,8 +45,8 @@ writeFileSync(`data/vibely/${day}.json`, JSON.stringify({ day, updated, n: items
 writeFileSync('out/vibely.json', JSON.stringify({ day, updated, items }));
 
 // 摘要
-const NAME = (i) => i.name?.replace(/(單程|來回)?機票$/, '') || `${i.from}→${i.to}`;
-const line = (i) => `- ${NAME(i)} ${i.type === 'rt' ? i.dep + '~' + i.ret.slice(5) + ' 來回' : i.dep + ' 單程'} ${i.airline} **NT$${i.price.toLocaleString()}**` + (i.ours ? `(我們 ${i.ours.toLocaleString()})` : '') + (i.stops.some((s) => s > 0) ? ' 轉機' : '');
+const NAME = (i) => `${i.from}→${i.toName || i.to}(${i.to})`;
+const line = (i) => `- ${NAME(i)} ${i.type === 'rt' ? i.dep + '~' + i.ret.slice(5) + ' 來回' : i.dep + ' 單程'} ${i.airline} **NT$${i.price.toLocaleString()}**` + (i.ours ? `(我們 ${i.ours.toLocaleString()})` : '') + (i.transfers || i.retTransfers ? ' 轉機' : ' 直飛') + (i.disc ? ` ↓${i.disc}%` : '');
 const g = (c) => items.filter((i) => i.cmp === c);
 const cnt = Object.fromEntries(['cheaper', 'ok', 'no-date', 'no-series', 'other-origin'].map((c) => [c, g(c).length]));
 let md = `## VibelySpot 互補(${day},站方更新 ${updated})\n共 ${items.length} 筆:比我們便宜 ${cnt.cheaper}、價格相近 ${cnt.ok}、我們該日沒資料 ${cnt['no-date']}、我們沒掃的航線 ${cnt['no-series']}、非桃園出發 ${cnt['other-origin']}\n`;
