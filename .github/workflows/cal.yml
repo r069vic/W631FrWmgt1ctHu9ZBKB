@@ -66,12 +66,14 @@ jobs:
         with:
           path: art
       - run: node merge_cal.mjs art
-      - name: Upload to travel-detector (one request per kind)
+      - name: Upload to travel-detector (one request per kind), then one Telegram summary for the run
         run: |
-          url="${OUTSTATION_URL%/out/ingest}/cal/ingest"
+          base="${OUTSTATION_URL%/out/ingest}/cal"
+          since=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
           for f in out/cal-*.json; do
-            echo "$f"; curl -sS --fail-with-body -X POST "$url" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" --data-binary @"$f"; echo
+            echo "$f"; curl -sS --fail-with-body -X POST "$base/ingest" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" --data-binary @"$f"; echo
           done
+          curl -sS --fail-with-body -X POST "$base/notify" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" -d "{\"since\":\"$since\"}"; echo
       - name: Commit history
         run: |
           git config user.name "scan-bot"

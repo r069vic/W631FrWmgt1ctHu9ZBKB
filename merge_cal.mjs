@@ -56,5 +56,6 @@ const merged = { ...prevToday };
 for (const [k, m] of Object.entries(todayHist)) merged[k] = { ...(prevToday[k] || {}), ...m };
 writeFileSync(todayFile, gzipSync(JSON.stringify(merged)));
 mkdirSync('out', { recursive: true });
-for (const [kind, routes] of Object.entries(byKind)) writeFileSync(`out/cal-${kind}.json`, JSON.stringify({ kind, day: today, stats, routes }));
+// defer: the Worker stores the alerts but sends one summary per run after all uploads (cal/notify, see cal.yml)
+for (const [kind, routes] of Object.entries(byKind)) writeFileSync(`out/cal-${kind}.json`, JSON.stringify({ kind, day: today, stats, routes, defer: true }));
 console.log(`calendar day=${today} series=${recs.length} priced=${priced} (${filled} filled from earlier runs today) days with baseline=${based} google errors ${stats.errs}/${stats.tries}`);
