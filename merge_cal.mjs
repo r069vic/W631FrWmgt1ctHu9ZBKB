@@ -26,6 +26,20 @@ for (const f of readdirSync('data/cal').filter((x) => /^\d{4}-\d{2}-\d{2}\.json\
 }
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 
+// Sanity filter: Google sometimes shows a page's calendar in another currency (seen 2026-11-10: USD amounts, about 1/31 of the
+// TWD price, e.g. 422 for a 14,000 fare). Such cells carry the same "新台幣" label, so they cannot be told apart when reading.
+// A price below 20% of what the same route and length normally costs (this run's median, or the history median if higher) is dropped.
+const medOf = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; };
+const dropped = [];
+for (const r of recs) {
+  if (!r.prices.length) continue;
+  const k = keyOf(r), hv = Object.values(hist[k] || {}).flat();
+  const ref = Math.max(medOf(r.prices.map((x) => x[1])), hv.length >= 10 ? medOf(hv) : 0);
+  const keep = r.prices.filter(([, v]) => v >= ref * 0.2);
+  if (keep.length < r.prices.length) { dropped.push(`${k}: ${r.prices.length - keep.length} (ref ${ref})`); r.prices = keep; }
+}
+if (dropped.length) console.log(`dropped implausibly low prices: ${dropped.join('; ')}`);
+
 // a day can have several runs; today's history file holds what the earlier runs of today saw
 const todayFile = join('data/cal', today + '.json.gz');
 const prevToday = existsSync(todayFile) ? JSON.parse(gunzipSync(readFileSync(todayFile)).toString()) : {};
