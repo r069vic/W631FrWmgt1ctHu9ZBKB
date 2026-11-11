@@ -1,0 +1,18 @@
+name: raw-debug
+on:
+  push:
+    branches: [raw-debug]
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save puppeteer-core
+      - run: |
+          mkdir -p results
+          CAL_RAW=1 CAL_DEBUG=1 node scan_cal.mjs --kinds same,lrt --airports KIX --shard 0 --shards 1 --out results/x.json 2>&1 | grep -v '^  dbg.*cells 0' | head -150
+        env:
+          CHROME_PATH: /usr/bin/google-chrome

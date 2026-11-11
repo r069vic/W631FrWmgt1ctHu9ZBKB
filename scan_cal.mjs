@@ -60,10 +60,13 @@ const tfs = (j) => {
 const launch = () => puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--lang=zh-TW', '--no-sandbox', '--disable-dev-shm-usage'] });
 
 // priced day cells currently in the calendar: [[date, price]]; the exact price is in an aria-label ", 20397 新台幣"
-const readCells = (p) => p.evaluate(() => [...document.querySelectorAll('[role=gridcell][data-iso]')].map((c) => {
-  const l = [...c.querySelectorAll('[aria-label]')].map((x) => x.getAttribute('aria-label')).find((t) => t.includes('新台幣'));
-  return l ? [c.getAttribute('data-iso'), +l.replace(/[^0-9]/g, '')] : null;
-}).filter(Boolean));
+const readCells = (p) => p.evaluate((RAW) => [...document.querySelectorAll('[role=gridcell][data-iso]')].map((c) => {
+  const ls = [...c.querySelectorAll('[aria-label]')].map((x) => x.getAttribute('aria-label'));
+  const l = ls.find((t) => t.includes('新台幣'));
+  const v = l ? +l.replace(/[^0-9]/g, '') : 0;
+  if (RAW && l && v < 2000 && !window.__seen?.[c.getAttribute('data-iso')]) { (window.__seen ??= {})[c.getAttribute('data-iso')] = 1; console.log('RAWCELL ' + c.getAttribute('data-iso') + ' ' + JSON.stringify(ls) + ' ' + c.innerText.replace(/\n/g, '|')); }
+  return l ? [c.getAttribute('data-iso'), v] : null;
+}).filter(Boolean), !!process.env.CAL_RAW);
 const lenLabel = (p) => p.evaluate(() => [...document.querySelectorAll('*')].find((e) => e.children.length === 0 && /日行程/.test(e.textContent) && e.offsetParent)?.textContent || '');
 const clickByLabel = (p, re) => p.evaluate((src) => { const r = new RegExp(src); const b = [...document.querySelectorAll('button,[role=button]')].find((e) => r.test(e.getAttribute('aria-label') || '') && e.offsetParent); if (b) { b.click(); return true; } return false; }, re);
 // the right arrow next to "N 日行程"
@@ -100,7 +103,7 @@ let b = await launch(); const results = []; let n = 0;
 // Retries the whole page up to `tries` times while nothing at all was read.
 async function scanLens(j, out, tries) {
   for (let at = 1; at <= tries && !j.lens.some((L) => out[L]); at++) {
-    const p = await b.newPage(); stats.tries++;
+    const p = await b.newPage(); stats.tries++; if (process.env.CAL_RAW) p.on('console', (m) => /^RAWCELL/.test(m.text()) && console.log(m.text().slice(0, 700)));
     try {
       await p.setExtraHTTPHeaders({ 'Accept-Language': 'zh-TW' }); await p.setViewport({ width: 1300, height: 1500 });
       await p.goto(`https://www.google.com/travel/flights?tfs=${tfs(j)}&hl=zh-TW&gl=TW&curr=TWD`, { waitUntil: 'networkidle2', timeout: 60000 });
