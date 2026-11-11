@@ -1,4 +1,4 @@
-// LINE Travel multi-city scan (HTTP only, no browser): X>TPE (Sunday) ... TPE>Y (nearest Wednesday).
+// LINE Travel multi-city scan (HTTP only, no browser): X>TPE (Sunday) ... TPE>Y (nearest Wednesday); Songshan instead of Taoyuan for HND and GMP.
 // Same jobs and output format as `scan.mjs --mode multi`, so merge.mjs and the Worker ingest work unchanged.
 // node scan_line.mjs --batch 3 --batches 24 --shard 0 --shards 4 --out results/shard-0.json
 // node scan_line.mjs --test --out test-out/line-test.json      small trial: a few pairs x 3 dates
@@ -62,11 +62,16 @@ const HEADERS = {
   'content-type': 'application/json', origin: 'https://travel.line.me', referer: 'https://travel.line.me/flights/list',
   'accept-language': 'zh-TW', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
 };
+// Taipei airport of a leg: full-service nonstops to Haneda and Gimpo use Songshan (TSA), everything else Taoyuan (TPE).
+// Asking LINE for TPE>HND with the full-service filter returns only a China Airlines TSA flight at a full fare
+// (57,950 for HKG>TPE ... TPE>HND on 2026-11-15, against 7,436 when the leg is asked as TSA>HND).
+const TSA_ENDS = new Set(['HND', 'GMP']);
+const hubOf = (c) => (TSA_ENDS.has(c) ? 'TSA' : 'TPE');
 const bodyOf = (j) => {
   const [X, Y] = j.a.split('>');
   return JSON.stringify({
     page: 1, pageSize: 20,
-    flightSegments: [{ departDate: j.out, fromAirport: X, toAirport: 'TPE' }, { departDate: j.back, fromAirport: 'TPE', toAirport: Y }],
+    flightSegments: [{ departDate: j.out, fromAirport: X, toAirport: hubOf(X) }, { departDate: j.back, fromAirport: hubOf(Y), toAirport: Y }],
     airlines: AIRLINES, roundType: 2, cabinClass: 1, numOfAdult: 1, numOfChildren: 0, numOfBaby: 0,
     order: 'asc', orderBy: 'priceAfterDiscount', linePointsRebateOnly: true, maxTransferCount: STOPS,
   });
