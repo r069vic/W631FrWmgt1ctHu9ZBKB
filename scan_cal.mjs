@@ -2,7 +2,8 @@
 // Kinds (one job per route and trip length):
 //   same  X>TPE ... TPE>X, stay about 94 / 185 days: lengths 91-97 and 182-188 are read and the cheapest per departure day is kept
 //         (Google has no cached price for many single long-stay lengths; the union covers about 80% of days)
-//   rt    TPE>X ... X>TPE, 5 / 6 / 7 days (one page; the trip length is switched in the calendar)
+//   rt    TPE>X ... X>TPE, 5 / 6 / 7 days (one page; the trip length is switched in the calendar), plus 3 days for the
+//         指定日期 watch (watch.json); the Worker keeps 3 days out of the rt cards
 //   ow1   TPE>X one-way      ow2   X>TPE one-way
 // Low-cost carrier kinds (廉航 tabs): lrt / low1 / low2 = rt / ow1 / ow2 on Taiwan, Japan, Korea and Hong Kong LCCs, Japan/Korea/HK airports.
 // Keys: 'X' (Taoyuan) or 'X@TSA' (Songshan).
@@ -22,7 +23,8 @@ const LCC = ['IT', 'MM', 'GK', 'ZG', 'IJ', '7C', 'TW', 'BX', 'LJ', 'RS', 'ZE', '
 const LCC_ALL = 'NRT,HND,KIX,NGO,FUK,CTS,OKA,OKJ,KMJ,TAK,SDJ,HKD,IBR,KOJ,ISG,KMQ,KCZ,YGJ,HSG,OIT,KMI,KIJ,AXT,HNA,FKS,ICN,GMP,PUS,CJU,TAE,HKG'.split(',');
 const isL = (k) => /^l(rt|ow1|ow2)$/.test(k), baseOf = (k) => (isL(k) ? k.slice(1) : k);
 const CENTERS = [94, 185], range = (c) => [-3, -2, -1, 0, 1, 2, 3].map((d) => c + d);
-const LENS = { same: CENTERS, rt: [5, 6, 7], ow1: [0], ow2: [0], lrt: [3, 4, 5, 6, 7], low1: [0], low2: [0] }; // LCC round trips 3-7 days: routes flown 2-3 times a week match only some lengths
+const WATCH_LEN = 3;
+const LENS = { same: CENTERS, rt: [5, 6, 7, WATCH_LEN], ow1: [0], ow2: [0], lrt: [3, 4, 5, 6, 7], low1: [0], low2: [0] }; // LCC round trips 3-7 days: routes flown 2-3 times a week match only some lengths
 const KINDS = arg('kinds', 'same,rt,ow1,ow2').split(',').filter((k) => LENS[k]);
 const AIRPORTS_ARG = arg('airports', '').split(',').filter(Boolean);
 const airportsOf = (k) => AIRPORTS_ARG.length ? AIRPORTS_ARG.filter((a) => !isL(k) || !a.includes('@')) : isL(k) ? LCC_ALL : ALL;
@@ -159,9 +161,10 @@ for (const j of mine) {
   // up to 4 tries: Google answers a share of page loads with its error page
   await scanLens(j, out, 4);
   if (!j.center) {
-    const cnt = (L) => (out[L] || []).length, most = Math.max(0, ...j.lens.map(cnt));
+    const cnt = (L) => (out[L] || []).length, most = Math.max(0, ...j.lens.filter((L) => !(j.k === 'rt' && L === WATCH_LEN)).map(cnt));
     const short = j.lens.filter((L) => {
       const prev = prevDays[`${j.k}|${j.a}|${L}`] || 0;
+      if (j.k === 'rt' && L === WATCH_LEN) return false; // watch length: no refill page loads
       return (j.lens.length > 1 && most >= REFILL_MIN_DAYS && cnt(L) < most / 2) || (prev >= PREV_MIN_DAYS && cnt(L) < prev / 2);
     });
     for (const L of short) {

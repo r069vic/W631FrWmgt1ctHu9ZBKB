@@ -7,7 +7,7 @@
 // returns status "UpdatesPending"; sending the same request again returns the results collected so far, until the status
 // is "UpdatesComplete". We start every search of the batch at once, wait --wait seconds, ask again, and repeat for the
 // searches that are still pending, up to --max-waits times. A search that fails (HTTP error) is not retried further.
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
@@ -20,6 +20,7 @@ const BATCH = +arg('batch', 0), BATCHES = +arg('batches', ALL.length);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = arg('lengths', '95,185').split(',').map(Number);
+const WATCHES = (() => { try { return JSON.parse(readFileSync(new URL('./watch.json', import.meta.url), 'utf8')); } catch { return []; } })();
 const HORIZON_DAYS = +arg('horizon', 328);
 const WAIT_S = +arg('wait', 60), MAX_WAITS = +arg('max-waits', 5), CONC = +arg('concurrency', 20);
 // --airlines ANY = no carrier filter; --stops N = max connections per leg (0 = nonstop only)
@@ -53,6 +54,12 @@ for (const a of pairs) {
   // test: a few fixed positions in the list (first date, then dates with the ~185-day stay and a later one)
   if (TEST) for (const i of [0, 3, 7, 1, 5, 9].slice(0, PER_PAIR)) { if (i < mine.length) jobs.push(mine[i]); }
   else jobs.push(...mine);
+  // 指定日期 watch (watch.json): the middle ticket ends Taipei -> second airport on the watch's outbound day,
+  // starting at the first airport 95 / 185 days earlier, like the regular stays. Flagged `watch` so the Worker stores it apart.
+  if (!TEST) for (const w of WATCHES) for (const L of LENGTHS) {
+    const back = Date.parse(w.out), o = back - L * DAY;
+    if (o > todayMs && back <= horizon) jobs.push({ a, out: iso(o), back: w.out, len: L, watch: w.out });
+  }
 }
 const todo = TEST ? jobs : jobs.filter((_, i) => i % SHARDS === SHARD);
 console.log(`line scan ${TEST ? 'TEST' : `batch ${BATCH}/${BATCHES}`} pairs=${pairs.length} jobs=${jobs.length} shard ${SHARD}/${SHARDS}: ${todo.length}; wait ${WAIT_S}s x max ${MAX_WAITS}, concurrency ${CONC}`);
