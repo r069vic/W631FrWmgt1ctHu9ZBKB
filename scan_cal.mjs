@@ -78,8 +78,18 @@ const readCells = (p) => p.evaluate(() => [...document.querySelectorAll('[role=g
 }).filter(Boolean));
 const lenLabel = (p) => p.evaluate(() => [...document.querySelectorAll('*')].find((e) => e.children.length === 0 && /日行程/.test(e.textContent) && e.offsetParent)?.textContent || '');
 const clickByLabel = (p, re) => p.evaluate((src) => { const r = new RegExp(src); const b = [...document.querySelectorAll('button,[role=button]')].find((e) => r.test(e.getAttribute('aria-label') || '') && e.offsetParent); if (b) { b.click(); return true; } return false; }, re);
-// the right arrow next to "N 日行程"
-const nextLen = (p) => p.evaluate(() => { const lab = [...document.querySelectorAll('*')].find((e) => e.children.length === 0 && /日行程/.test(e.textContent) && e.offsetParent); let box = lab; for (let k = 0; k < 4 && box; k++) { box = box.parentElement; const bs = [...box.querySelectorAll('button,[role=button]')]; if (bs.length >= 2) { bs[bs.length - 1].click(); return true; } } return false; });
+// the arrows next to "N 日行程": dir 1 = right (one day longer), -1 = left (one day shorter)
+const stepLen = (p, dir) => p.evaluate((dir) => { const lab = [...document.querySelectorAll('*')].find((e) => e.children.length === 0 && /日行程/.test(e.textContent) && e.offsetParent); let box = lab; for (let k = 0; k < 4 && box; k++) { box = box.parentElement; const bs = [...box.querySelectorAll('button,[role=button]')]; if (bs.length >= 2) { bs[dir > 0 ? bs.length - 1 : bs.length - 2].click(); return true; } } return false; }, dir);
+const lenNow = async (p) => parseInt(await lenLabel(p), 10) || 0;
+// step the trip length to L one click at a time (Google moves one day per click), waiting for the label each time
+async function setLen(p, L) {
+  for (let n = 0; n < 12; n++) {
+    const cur = await lenNow(p); if (cur === L) return true; if (!cur) return false;
+    await stepLen(p, L > cur ? 1 : -1);
+    for (let i = 0; i < 12 && (await lenNow(p)) === cur; i++) await sleep(400);
+  }
+  return (await lenNow(p)) === L;
+}
 
 // earliest date shown in the calendar right now
 const firstShown = (p) => p.evaluate(() => [...document.querySelectorAll('[role=gridcell][data-iso]')].filter((c) => c.offsetParent).map((c) => c.getAttribute('data-iso')).sort()[0] || '');
@@ -124,9 +134,9 @@ async function scanLens(j, out, tries) {
       for (let li = 0; li < j.lens.length; li++) {
         const L = j.lens[li];
         if (li > 0) {
-          // switch the trip length in place; read from wherever the calendar now is
-          await nextLen(p);
-          for (let i = 0; i < 15 && !(await lenLabel(p)).startsWith(L + ' '); i++) await sleep(500);
+          // switch the trip length in place (up or down); read from wherever the calendar now is
+          await setLen(p, L);
+          for (let i = 0; i < 10 && !(await lenLabel(p)).startsWith(L + ' '); i++) await sleep(500);
           if (!(await lenLabel(p)).startsWith(L + ' ')) { dbg(j.k, j.a, 'switch to', L, 'failed, label', JSON.stringify(await lenLabel(p))); break; }
           await sleep(1500);
         }
