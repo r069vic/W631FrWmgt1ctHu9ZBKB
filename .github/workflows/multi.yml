@@ -65,4 +65,4 @@ jobs:
           curl -sS --fail-with-body -X POST "$OUTSTATION_URL" -H "Authorization: Bearer $OUTSTATION_TOKEN" -H "content-type: application/json" --data-binary @out/payload.json > resp.json
           cat resp.json
           keys=$(node -e "const r=require('./resp.json');process.stdout.write((r.fine||[]).join(','))")
-          if [ -n "$keys" ]; then gh workflow run scan.yml --repo "$GITHUB_REPOSITORY" -f mode=fine -f airports="$keys"; fi
+          if [ -n "$keys" ]; then gh workflow run scan.yml --repo "$GITHUB_REPOSITORY" -f mode=fine -f airports="$keys" || echo "scan.yml disabled, fine scan skipped"; fi
