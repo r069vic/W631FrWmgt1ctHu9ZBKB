@@ -40,8 +40,18 @@ for (const k of KINDS) for (const a of airportsOf(k)) {
   else if (k === 'same') for (const c of CENTERS) jobs.push({ k, a, lens: range(c), center: c });
   else for (const L of LENS[k]) jobs.push({ k, a, lens: [L] });
 }
-const mine = jobs.filter((_, i) => i % SHARDS === SHARD);
-console.log(`calendar kinds=${KINDS.join(',')} jobs=${jobs.length} shard ${SHARD}/${SHARDS}: ${mine.length}`);
+// Low-cost runs: each shard takes one region, all three kinds (lrt, low1, low2) of its airports, instead of jobs dealt out
+// round-robin. 10 groups for the 10 shards of cal.yml; an airport missing here falls back to its position in LCC_ALL.
+const LCC_GROUPS = [
+  ['東京', 'NRT,HND,IBR'], ['北海道・東北', 'CTS,HKD,AXT,HNA'], ['東北・北陸', 'SDJ,FKS,KIJ,KMQ'], ['名古屋・大阪', 'NGO,KIX'],
+  ['中國・四國', 'OKJ,YGJ,TAK,KCZ'], ['九州北', 'FUK,HSG,OIT'], ['九州南', 'KMJ,KOJ,KMI'], ['沖繩', 'OKA,ISG'],
+  ['韓國', 'ICN,GMP,PUS'], ['韓國・香港', 'CJU,TAE,HKG'],
+].map(([name, a]) => ({ name, a: a.split(',') }));
+const lccGroup = (a) => { const g = LCC_GROUPS.findIndex((x) => x.a.includes(a)); return g >= 0 ? g : LCC_ALL.indexOf(a); };
+const byRegion = KINDS.every(isL);
+const mine = byRegion ? jobs.filter((j) => lccGroup(j.a) % SHARDS === SHARD) : jobs.filter((_, i) => i % SHARDS === SHARD);
+console.log(`calendar kinds=${KINDS.join(',')} jobs=${jobs.length} shard ${SHARD}/${SHARDS}: ${mine.length}` +
+  (byRegion ? ` [${LCC_GROUPS.filter((_, g) => g % SHARDS === SHARD).map((x) => x.name).join(', ')}] ${[...new Set(mine.map((j) => j.a))].join(',')}` : ''));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const varint = (n) => { const o = []; while (n > 127) { o.push((n & 127) | 128); n = Math.floor(n / 128); } o.push(n); return Buffer.from(o); };

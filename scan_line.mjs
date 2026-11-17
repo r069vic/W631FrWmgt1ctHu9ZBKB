@@ -16,7 +16,7 @@ const ALL = 'HND,NRT,NGO,KIX,FUK,CTS,TAK,KMJ,OKA,OKJ,HKG,BKK,DMK,KUL,SIN,SGN,HAN
 // same-city pairs make no sense as multi-city
 const SAME_CITY = new Set(['HND>NRT', 'NRT>HND', 'ICN>GMP', 'GMP>ICN', 'BKK>DMK', 'DMK>BKK']);
 const PAIRS = ALL.flatMap((x) => ALL.filter((y) => y !== x).map((y) => x + '>' + y)).filter((k) => !SAME_CITY.has(k));
-const BATCH = +arg('batch', 0), BATCHES = +arg('batches', 24);
+const BATCH = +arg('batch', 0), BATCHES = +arg('batches', ALL.length);
 const SHARD = +arg('shard', 0), SHARDS = +arg('shards', 1);
 const OUT = arg('out', `results/shard-${SHARD}.json`);
 const LENGTHS = arg('lengths', '95,185').split(',').map(Number);
@@ -41,7 +41,8 @@ for (let m = 0; m < 12; m++) {
   let o = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1); while (dow(o) !== 0) o += DAY;
   if (o > todayMs && o !== firstSun && o <= horizon) outs.push(o);
 }
-const pairs = TEST ? TEST_PAIRS : PAIRS.filter((_, i) => i % BATCHES === BATCH);
+// one departure airport per batch: batch b = every pair leaving ALL[b] (multi.yml runs batches 0-21, one per UTC hour)
+const pairs = TEST ? TEST_PAIRS : PAIRS.filter((k) => ALL.indexOf(k.split('>')[0]) % BATCHES === BATCH);
 const jobs = [];
 for (const a of pairs) {
   const mine = [];

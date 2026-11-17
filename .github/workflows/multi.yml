@@ -1,14 +1,17 @@
 name: multi
 # Multi-city X>TPE ... TPE>Y for every pair, nonstop only, from LINE Travel's JSON API (scan_line.mjs).
-# 24 hourly batches (batch = UTC hour); each pair once a day, all months. One batch = about 19 pairs x 13 date groups.
+# 22 hourly batches, one departure airport each (batch = UTC hour 0-21 = index in scan_line.mjs ALL):
+# Taipei 08:17 HND, 09:17 NRT, 10:17 NGO, 11:17 KIX, 12:17 FUK, 13:17 CTS, 14:17 TAK, 15:17 KMJ, 16:17 OKA, 17:17 OKJ, 18:17 HKG,
+# 19:17 BKK, 20:17 DMK, 21:17 KUL, 22:17 SIN, 23:17 SGN, 00:17 HAN, 01:17 DAD, 02:17 ICN, 03:17 GMP, 04:17 PUS, 05:17 BWN.
+# Each pair once a day, all months. One batch = about 20 pairs x 13 date groups.
 # LINE finds no nonstop itinerary -> the pair has no row (nothing is guessed from Google).
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 0-21 * * *'
   workflow_dispatch:
     inputs:
       batch:
-        description: batch 0-23, empty = the current UTC hour
+        description: batch 0-21 (departure airport), empty = the current UTC hour
         default: ''
 permissions:
   contents: read
@@ -40,7 +43,7 @@ jobs:
         with:
           node-version: 20
       # waits 60 s after starting the searches, then asks again every 60 s (at most 5 times) until LINE reports them complete
-      - run: node scan_line.mjs --batch ${{ needs.plan.outputs.batch }} --batches 24 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json
+      - run: node scan_line.mjs --batch ${{ needs.plan.outputs.batch }} --batches 22 --shard ${{ matrix.shard }} --shards 4 --out results/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

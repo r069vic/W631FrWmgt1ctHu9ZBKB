@@ -3,6 +3,7 @@ name: cal
 # Full-service (same, rt, ow1, ow2) - Taipei time: 00:30 everything, 10:30 round trips + one-ways, 12:30 same-station.
 # Low-cost carriers (lrt, low1, low2: Japan / Korea / Hong Kong) - every 4 hours, Taipei time 03:45, 07:45, 11:45, 15:45, 19:45, 23:45,
 # which stays clear of the full-service runs above (one run takes about 10-12 minutes).
+# Low-cost runs give each shard one region (scan_cal.mjs LCC_GROUPS: 東京, 北海道・東北, … 韓國・香港); full-service runs deal jobs round-robin.
 # Load is spread out so Google sees fewer page loads per machine: 10 shards (each its own runner / IP), each starting after a
 # random 0-5 min wait and pausing 10-30 s between searches.
 on:
